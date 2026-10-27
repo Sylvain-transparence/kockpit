@@ -2,9 +2,11 @@ package org.kockpit.audit.annotation;
 
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
@@ -12,6 +14,9 @@ import org.springframework.core.env.Environment;
 @Aspect
 @Slf4j
 public class AuditCommandLineRunnerAspect {
+
+  static final int SUCCESS_EXIT_CODE = 0;
+  static final int FAILURE_EXIT_CODE = 1;
 
   private final Environment environment;
   private final ConfigurableApplicationContext context;
@@ -22,15 +27,32 @@ public class AuditCommandLineRunnerAspect {
     this.context = context;
   }
 
-  @Before("@annotation(auditCommandLineRunner)")
-  public void before(AuditCommandLineRunner auditCommandLineRunner) {
+  @Pointcut("@annotation(org.kockpit.audit.annotation.AuditCommandLineRunner)")
+  void annotatedMethod() {}
+
+  // Class-level usage only applies to the runner entry point, not to every method of the class
+  @Pointcut(
+      "@within(org.kockpit.audit.annotation.AuditCommandLineRunner)"
+          + " && execution(* org.springframework.boot.CommandLineRunner+.run(..))")
+  void annotatedRunner() {}
+
+  @Before("annotatedMethod() || annotatedRunner()")
+  public void before() {
     logApplicationStartup(environment);
   }
 
-  @After("@annotation(auditCommandLineRunner)")
-  public void after(AuditCommandLineRunner auditCommandLineRunner) {
+  @AfterReturning("annotatedMethod() || annotatedRunner()")
+  public void afterReturning() {
     logApplicationFinish(environment);
-    forceStopApp();
+    forceStopApp(SUCCESS_EXIT_CODE);
+  }
+
+  @AfterThrowing(pointcut = "annotatedMethod() || annotatedRunner()", throwing = "ex")
+  public void afterThrowing(Throwable ex) {
+    log.error(
+        "Application '{}' failed", environment.getProperty("spring.application.name"), ex);
+    logApplicationFinish(environment);
+    forceStopApp(FAILURE_EXIT_CODE);
   }
 
   protected static void logApplicationStartup(Environment env) {
@@ -46,12 +68,16 @@ public class AuditCommandLineRunnerAspect {
         env.getProperty("spring.application.name"));
   }
 
-  protected void forceStopApp() {
+  protected void forceStopApp(int exitCode) {
     // Used since aws scheduled task is stuck in running state
     if (Objects.isNull(context)) {
-      System.exit(0);
+      exit(exitCode);
     } else {
-      System.exit(SpringApplication.exit(context));
+      exit(SpringApplication.exit(context, () -> exitCode));
     }
+  }
+
+  protected void exit(int status) {
+    System.exit(status);
   }
 }
