@@ -311,14 +311,15 @@
     margin-top:14px; font-size:13.5px; color:var(--text-dim); max-width:640px;
   }
 
-  /* ---------- backends row ---------- */
-  .backends{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;}
-  .backend{
-    border:1px dashed var(--line); border-radius:10px; padding:22px;
-    text-align:center;
-  }
-  .backend .bname{font-family:var(--font-mono); font-weight:600; font-size:14px; color:var(--text); margin-bottom:8px;}
-  .backend .bdesc{font-size:12.5px; color:var(--text-dim); line-height:1.5;}
+  /* ---------- architecture: one flow per backend, a lane per channel ---------- */
+  .flow{margin-top:20px; display:flex; flex-direction:column; gap:10px;}
+  .lane{display:flex; align-items:center; flex-wrap:wrap; gap:8px;}
+  .lane .lname{width:72px; flex-shrink:0; font-family:var(--font-mono); font-size:11px; color:var(--text-faint); letter-spacing:0.06em; text-transform:uppercase;}
+  .lane .node{font-family:var(--font-mono); font-size:12px; color:var(--text-dim); border:1px solid var(--line); border-radius:6px; padding:5px 10px; background:var(--panel-2);}
+  /* the part that changes per backend: double border + bold, not color alone */
+  .lane .node.hl{color:var(--text); font-weight:600; border:3px double var(--amber); padding:3px 8px;}
+  .lane .arrow{font-family:var(--font-mono); color:var(--text-faint); font-size:13px;}
+  .mod-parts a{color:var(--amber);}
 
   /* ---------- quick start ---------- */
   .qs-prereq{
@@ -435,7 +436,7 @@
     .panel-module:nth-child(2){border-right:none;}
     .mod-thumbs{grid-template-columns:repeat(2, 1fr);}
     .mod-parts{grid-template-columns:1fr;}
-    .backends{grid-template-columns:1fr;}
+    .lane .lname{width:100%;}
     .qs-providers{grid-template-columns:repeat(2, 1fr);}
     .resgrid{grid-template-columns:1fr;}
     .navlinks{display:none;}
@@ -1071,27 +1072,157 @@
   </div>
 </section>
 
-<section id="architecture" class="border-top tight">
+<section id="architecture" class="border-top">
   <div class="wrap">
     <div class="section-head">
       <div class="kicker"><span class="led blue"></span> Architecture</div>
-      <h2>Bring your own storage layer.</h2>
-      <p>The backend application ships in three flavors, depending on where your audit data
-      and notifications should live. All three sit in front of the same OpenSearch-backed search engine.</p>
+      <h2>Two channels, on the infrastructure you already run.</h2>
+      <p>Your services talk to Kockpit on two channels. <b style="color:var(--text);font-weight:500">Audits</b> go through a
+      stream into OpenSearch, where the backend searches them. <b style="color:var(--text);font-weight:500">Features</b>
+      (flags, configuration, caches, heartbeats) go both ways as messages on a shared storage. The backend ships in one
+      image per storage; pick one to see how it is wired.</p>
     </div>
-    <div class="backends">
-      <div class="backend">
-        <div class="bname">kockpit-backend-application-filesystem</div>
-        <div class="bdesc">Local drive or mounted volume for file-based communication. Good default for on-prem or single-node setups.</div>
+
+    <div class="mod-thumbs qs-providers" role="tablist" aria-label="Choose a backend">
+      <button class="qs-provider" role="tab" id="arch-tab-fs" aria-controls="arch-panel-fs" aria-selected="true" data-module="fs">
+        <span class="pmono" aria-hidden="true">FS</span>
+        <span class="pname">Filesystem</span>
+        <span class="pdesc">A local folder or mounted volume, with audits on Kafka. The default.</span>
+        <span class="pstate">Selected</span>
+      </button>
+      <button class="qs-provider" role="tab" id="arch-tab-azure" aria-controls="arch-panel-azure" aria-selected="false" data-module="azure">
+        <span class="pmono" aria-hidden="true">AZ</span>
+        <span class="pname">Azure</span>
+        <span class="pdesc">An Azure Storage account, with audits on Kafka.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="arch-tab-eh" aria-controls="arch-panel-eh" aria-selected="false" data-module="eh">
+        <span class="pmono" aria-hidden="true">EH</span>
+        <span class="pname">Azure Event Hubs</span>
+        <span class="pdesc">An Azure Storage account, with audits on Event Hubs' native client.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="arch-tab-aws" aria-controls="arch-panel-aws" aria-selected="false" data-module="aws">
+        <span class="pmono" aria-hidden="true">AWS</span>
+        <span class="pname">AWS</span>
+        <span class="pdesc">S3, with audits on Kinesis and Amazon OpenSearch Service.</span>
+        <span class="pstate">Select</span>
+      </button>
+    </div>
+
+    <!-- ===== Filesystem ===== -->
+    <div class="mod-panel active" role="tabpanel" id="arch-panel-fs" aria-labelledby="arch-tab-fs" data-mpanel="fs">
+      <div class="mhead"><h3>Filesystem</h3><span class="mpath">kockpit-backend-application-filesystem</span></div>
+      <p class="mintro">Everything on one machine or one shared volume: the right default for development,
+      on-premises and single-node setups.</p>
+      <div class="flow" aria-label="How the Filesystem backend is wired">
+        <div class="lane"><span class="lname">Audits</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">Kafka</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Console</span></div>
+        <div class="lane"><span class="lname">Features</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">⇄</span>
+          <span class="node hl">Folder / volume</span><span class="arrow" aria-hidden="true">⇄</span>
+          <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Console</span></div>
       </div>
-      <div class="backend">
-        <div class="bname">kockpit-backend-application-azure</div>
-        <div class="bdesc">Azure Storage Account for files, Azure Event Hub (Kafka protocol) for audit notifications.</div>
+      <ul class="mod-parts">
+        <li><span class="pname">Storage</span><span class="pinfo"><code>kockpit-core-communication-filesystem</code> for feature messages, manifests read from the same folder.</span></li>
+        <li><span class="pname">Audit stream</span><span class="pinfo"><code>kockpit-audit-stream-application-kafka</code>, from Kafka into OpenSearch.</span></li>
+        <li><span class="pname">Maven profile</span><span class="pinfo"><code>filesystem</code>, active by default.</span></li>
+        <li><span class="pname">Try it</span><span class="pinfo">The <a href="#quickstart">Kafka</a> and <a href="#quickstart">Kubernetes</a> quick starts.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Azure ===== -->
+    <div class="mod-panel" role="tabpanel" id="arch-panel-azure" aria-labelledby="arch-tab-azure" data-mpanel="azure">
+      <div class="mhead"><h3>Azure</h3><span class="mpath">kockpit-backend-application-azure</span></div>
+      <p class="mintro">Feature messages and manifests on an Azure Storage account; audits on Kafka.</p>
+      <div class="flow" aria-label="How the Azure backend is wired">
+        <div class="lane"><span class="lname">Audits</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">Kafka</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Console</span></div>
+        <div class="lane"><span class="lname">Features</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">⇄</span>
+          <span class="node hl">Azure Storage</span><span class="arrow" aria-hidden="true">⇄</span>
+          <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Console</span></div>
       </div>
-      <div class="backend">
-        <div class="bname">kockpit-backend-application-aws</div>
-        <div class="bdesc">S3 for file-based communication, Kinesis for audit notifications.</div>
+      <ul class="mod-parts">
+        <li><span class="pname">Storage</span><span class="pinfo"><code>kockpit-core-communication-storageaccount</code> for feature messages, manifests on the same account.</span></li>
+        <li><span class="pname">Audit stream</span><span class="pinfo"><code>kockpit-audit-stream-application-kafka</code>, from Kafka into OpenSearch.</span></li>
+        <li><span class="pname">Backend's own audits</span><span class="pinfo">Sent to Kafka, through <code>kockpit-features-audit-starters-kafka</code>.</span></li>
+        <li><span class="pname">Maven profile</span><span class="pinfo"><code>azure</code>.</span></li>
+        <li><span class="pname">Try it</span><span class="pinfo">The <a href="#quickstart">Azure</a> quick start, with Azurite emulating the storage.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Azure Event Hubs ===== -->
+    <div class="mod-panel" role="tabpanel" id="arch-panel-eh" aria-labelledby="arch-tab-eh" data-mpanel="eh">
+      <div class="mhead"><h3>Azure Event Hubs</h3><span class="mpath">kockpit-backend-application-azure-eventhub</span></div>
+      <p class="mintro">The Azure backend, with its audits sent through the native Event Hubs client instead of Kafka.</p>
+      <div class="flow" aria-label="How the Azure Event Hubs backend is wired">
+        <div class="lane"><span class="lname">Audits</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">Event Hubs</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Console</span></div>
+        <div class="lane"><span class="lname">Features</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">⇄</span>
+          <span class="node hl">Azure Storage</span><span class="arrow" aria-hidden="true">⇄</span>
+          <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Console</span></div>
       </div>
+      <ul class="mod-parts">
+        <li><span class="pname">Storage</span><span class="pinfo"><code>kockpit-core-communication-storageaccount</code>, as for Azure.</span></li>
+        <li><span class="pname">Backend's own audits</span><span class="pinfo">Sent to Event Hubs, through <code>kockpit-features-audit-starters-eventhub</code>.</span></li>
+        <li><span class="pname">Audit stream</span><span class="pinfo">No Event Hubs-specific image ships: the audit stream images are for Kafka and Kinesis.</span></li>
+        <li><span class="pname">Maven profile</span><span class="pinfo"><code>azure-eventhub</code>.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== AWS ===== -->
+    <div class="mod-panel" role="tabpanel" id="arch-panel-aws" aria-labelledby="arch-tab-aws" data-mpanel="aws">
+      <div class="mhead"><h3>AWS</h3><span class="mpath">kockpit-backend-application-aws</span></div>
+      <p class="mintro">Feature messages and manifests on S3, audits on Kinesis, and Amazon OpenSearch Service with
+      signed requests. Kinesis can also feed an S3 archive of every audit.</p>
+      <div class="flow" aria-label="How the AWS backend is wired">
+        <div class="lane"><span class="lname">Audits</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">Kinesis</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Console</span></div>
+        <div class="lane"><span class="lname">Archive</span>
+          <span class="node hl">Kinesis</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Kinesis to S3</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">S3</span></div>
+        <div class="lane"><span class="lname">Features</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">⇄</span>
+          <span class="node hl">S3</span><span class="arrow" aria-hidden="true">⇄</span>
+          <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Console</span></div>
+      </div>
+      <ul class="mod-parts">
+        <li><span class="pname">Storage</span><span class="pinfo"><code>kockpit-core-communication-s3</code> for feature messages, manifests on S3.</span></li>
+        <li><span class="pname">Legacy messages</span><span class="pinfo"><code>kockpit-core-communication-legacy</code> keeps applications on the older S3 message format working.</span></li>
+        <li><span class="pname">Audit stream</span><span class="pinfo"><code>kockpit-audit-stream-application-aws</code>, or <code>-aws-efo</code> for Kinesis enhanced fan-out.</span></li>
+        <li><span class="pname">Archive</span><span class="pinfo"><code>kockpit-kinesis-s3-application</code> writes the audits to S3 for long-term storage.</span></li>
+        <li><span class="pname">Backend's own audits</span><span class="pinfo">Sent to Kinesis, through <code>kockpit-audit-notification-kinesis</code>.</span></li>
+        <li><span class="pname">OpenSearch</span><span class="pinfo">Requests signed by <code>kockpit-aws-opensearch-request-signing</code>.</span></li>
+        <li><span class="pname">Maven profile</span><span class="pinfo"><code>aws</code>.</span></li>
+        <li><span class="pname">Try it</span><span class="pinfo">The <a href="#quickstart">AWS</a> quick start: LocalStack, with the apps run from your IDE.</span></li>
+      </ul>
     </div>
   </div>
 </section>
@@ -1415,8 +1546,8 @@
     });
   });
 
-  // what it is + capabilities: thumbnails with a detail panel, same behaviour as the quick start provider cards
-  ['#what', '#capabilities'].forEach(function(section){
+  // what it is, capabilities, architecture: thumbnails with a detail panel, same behaviour as the quick start provider cards
+  ['#what', '#capabilities', '#architecture'].forEach(function(section){
   document.querySelectorAll(section + ' .qs-provider').forEach(function(card){
     card.addEventListener('click', function(){
       var target = card.getAttribute('data-module');
