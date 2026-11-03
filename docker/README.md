@@ -5,7 +5,7 @@ Each profile has its own folder with a `docker-compose.yml`, so run `docker comp
 
 | Folder        | Contents                                                                    |
 |---------------|-----------------------------------------------------------------------------|
-| `kafka/`      | Infrastructure only: Kafka, OpenSearch, OpenSearch Dashboards               |
+| `kafka/`      | Infrastructure only: Kafka, OpenSearch, OpenSearch Dashboards; `docker-compose-full.yml` adds the Kockpit applications |
 | `azure/`      | Kafka + OpenSearch + Kockpit applications using Azure Storage (Azurite)     |
 | `aws/`        | LocalStack (S3, SQS, SNS, Kinesis, DynamoDB) + OpenSearch                   |
 | `filesystem/` | Kafka + OpenSearch + Kockpit applications using local filesystem storage    |
@@ -47,6 +47,32 @@ Because the Compose project is named after the folder (`kafka`), stop it from th
 
 ```bash
 docker compose down
+```
+
+### Full stack (infrastructure + Kockpit applications)
+
+`kafka/docker-compose-full.yml` includes `kafka/docker-compose.yml` and adds the Kockpit applications, pulled from
+the GitHub Container Registry with their `latest` tag (built from the default branch, re-pulled on every `up`):
+
+- **kockpit-audit-stream-application**: Kafka audit stream processor, indexing audits into OpenSearch
+- **kockpit-backend-application**: Kockpit backend API (filesystem storage)
+- **kockpit-console**: Web UI for audit visualization
+
+```bash
+cd kafka
+docker compose -f docker-compose-full.yml up -d
+```
+
+Endpoints, in addition to the infrastructure ones above:
+- Console UI: http://localhost:3000
+- Backend API: http://localhost:8080/api
+- Audit Stream: http://localhost:8081
+
+The backend reads manifests and audit payloads from `KOCKPIT_DATA_DIR` (defaults to the repository's `data/`
+folder), mounted at `/data`. Stop the stack with the same file:
+
+```bash
+docker compose -f docker-compose-full.yml down
 ```
 
 ## Azure Configuration
@@ -108,7 +134,7 @@ DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02x
 
 ### Endpoints
 
-- Backend API: http://localhost:8080/backend/api
+- Backend API: http://localhost:8080/api
 - Sample Application: http://localhost:8082/sample-app
 - Audit Console UI: http://localhost:3000
 - OpenSearch: http://localhost:9200
@@ -157,34 +183,46 @@ If your LocalStack version requires an auth token, export `LOCALSTACK_AUTH_TOKEN
 
 ## Filesystem Configuration
 
-The `filesystem/` folder runs Kafka, OpenSearch and the Kockpit applications, storing audits and manifests in
-`~/IdeaProjects/kockpit/data`.
+The `filesystem/` folder runs Kafka, OpenSearch and the Kockpit applications (including the sample application),
+storing audits and manifests in `KOCKPIT_DATA_DIR` (defaults to the repository's `data/` folder).
 
 ```bash
 cd filesystem
 docker compose up -d
 ```
 
+Endpoints:
+- Audit Console UI: http://localhost:3000
+- Backend API: http://localhost:8080/api
+- Audit Stream: http://localhost:8081
+- Sample Application: http://localhost:8082/sample-app
+- OpenSearch: http://localhost:9200
+- OpenSearch Dashboards: http://localhost:5601
+- Kafka: localhost:29092 (from the host), kafka:9092 (from other containers)
+
 ## Miscellaneous
 
-Start the audit-console
-```shell
-   docker run -p 3000:80 \
-    -e KOCKPIT_BACKEND=http://localhost:8080/backend \
-    --name kockpit-console \
-   ghcr.io/mahieddine-ichir/kockpit/kockpit-console:latest
-```
+To run the backend and the console as standalone containers against infrastructure published on the host
+(e.g. the `kafka/` stack), reach the host through `host.docker.internal` (on Linux, add
+`--add-host=host.docker.internal:host-gateway` to each `docker run`): inside a container, `localhost` is the
+container itself.
 
-Start the audit-console-backend
+Start the audit-console-backend (filesystem storage, data read from `./data`)
 ```shell
    docker run -p 8080:8080 --rm \
       -v ./data:/data \
-      -e OPENSEARCH_ENDPOINTS=http://localhost:9200 \
-      -e INDEX_NAME=audit-data \
-      -e kockpit.audit.local.storage-path=/data/manifests \
-      -e kockpit.sdk.filesystem.local_directory=/data \
-      -e kockpit.sdk.manifest.filesystem.path=/data/manifests \
-      -e spring.profiles.active=filesystem,opensearch,local \
+      -e OPENSEARCH_ENDPOINTS=http://host.docker.internal:9200 \
+      -e INDEX_NAME=auditdata \
+      -e FS_MANIFESTS_PATH=/data/manifests \
+      -e FS_STORAGE_PATH=/data \
       --name kockpit-backend \
    ghcr.io/mahieddine-ichir/kockpit/kockpit-backend-application-filesystem:latest
+```
+
+Start the audit-console (nginx proxies `/api` to `${KOCKPIT_BACKEND}/api`)
+```shell
+   docker run -p 3000:80 --rm \
+    -e KOCKPIT_BACKEND=http://host.docker.internal:8080 \
+    --name kockpit-console \
+   ghcr.io/mahieddine-ichir/kockpit/kockpit-console:latest
 ```

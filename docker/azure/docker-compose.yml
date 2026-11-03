@@ -108,11 +108,16 @@ services:
       - MANIFESTS_STORAGE_ACCOUNT=${MANIFESTS_STORAGE_ACCOUNT:-devstoreaccount1}
       - MANIFESTS_STORAGE_KEY=${MANIFESTS_STORAGE_KEY:-Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==}
       - MANIFESTS_STORAGE_CONTAINER=${MANIFESTS_STORAGE_CONTAINER:-manifests}
+      - BOOTSTRAP_SERVERS=kafka:9092
       - OPENSEARCH_ENDPOINTS=http://opensearch:9200
       - spring.profiles.include=azure
+      # must match the audit stream's INDEX_SUFFIX
       - INDEX_NAME=audit-data
-      - kockpit.sdk.service.audit.notification.topic=audits
     depends_on:
+      kafka:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
       azurite-init:
         condition: service_completed_successfully
 
@@ -122,7 +127,8 @@ services:
     ports:
       - "3000:80"
     environment:
-      - KOCKPIT_BACKEND=http://kockpit-backend-application:8080/backend
+      # nginx proxies /api to ${KOCKPIT_BACKEND}/api
+      - KOCKPIT_BACKEND=http://kockpit-backend-application:8080
     depends_on:
       - kockpit-backend-application
 
@@ -134,6 +140,7 @@ services:
     environment:
       - BOOTSTRAP_SERVERS=kafka:9092
       - OPENSEARCH_ENDPOINTS=http://opensearch:9200
+      - INDEX_SUFFIX=audit-data
       - KOCKPIT_AUDIT_STREAM_KAFKA_TOPICS=audits
       - KOCKPIT_AUDIT_NOTIFICATION_KAFKA_TOPIC=audits
       #- SPRING_PROFILES_INCLUDE=eventhub -> on azure
@@ -149,20 +156,13 @@ services:
     ports:
       - "8082:8082"
     environment:
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - KOCKPIT_SDK_DOMAIN=kockpit
-      - KOCKPIT_SDK_ENV=local
-      - KOCKPIT_SDK_APPID=sample-app
-      - kockpit.sdk.service.audit.notification.topic=audits
+      # read by spring.kafka.producer.bootstrap-servers in the sample's application.yml
+      - BOOTSTRAP_SERVERS=kafka:9092
       # storage defaults to Azurite; set these in .env to use a real storage account
       - KOCKPIT_COMMUNICATION_AZURE_STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://azurite:10000/devstoreaccount1}
       - STORAGE_ACCOUNT=${STORAGE_ACCOUNT:-devstoreaccount1}
       - STORAGE_KEY=${STORAGE_KEY:-Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==}
       - STORAGE_CONTAINER=${STORAGE_CONTAINER:-data}
-    volumes:
-      - ~/IdeaProjects/kockpit/data:/data
-    links:
-      - kafka:kafka
     depends_on:
       kafka:
         condition: service_healthy
