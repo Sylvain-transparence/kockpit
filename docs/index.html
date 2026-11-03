@@ -293,17 +293,66 @@
   .backend .bdesc{font-size:12.5px; color:var(--text-dim); line-height:1.5;}
 
   /* ---------- quick start ---------- */
-  .qs-tabs{display:flex; gap:2px; border-bottom:1px solid var(--line); margin-bottom:0; flex-wrap:wrap;}
-  .qs-tab{
-    font-family:var(--font-mono); font-size:12.5px; color:var(--text-dim);
-    padding:12px 18px; cursor:pointer; border-bottom:2px solid transparent;
-    transition:color 0.15s, border-color 0.15s;
-    background:none; border-top:none; border-left:none; border-right:none;
+  .qs-prereq{
+    display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;
+    font-size:13.5px; color:var(--text-dim); margin-bottom:28px;
   }
-  .qs-tab:hover{color:var(--text);}
-  .qs-tab.active{color:var(--amber); border-bottom-color:var(--amber);}
-  .qs-panel{display:none;}
+  .qs-prereq b{color:var(--text); font-weight:500;}
+  .qs-prereq code{color:var(--blue); font-size:12.5px;}
+  .qs-providers{display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;}
+  .qs-provider{
+    position:relative; text-align:left; cursor:pointer;
+    border:1px solid var(--line); border-radius:10px; padding:20px 18px 18px;
+    background:var(--panel); color:var(--text); font-family:var(--font-body);
+    display:flex; flex-direction:column; gap:12px;
+    transition:border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  }
+  .qs-provider:hover{border-color:#38414F; transform:translateY(-2px);}
+  /* selected: thicker border + check mark + "Selected" label, not color alone */
+  .qs-provider[aria-selected="true"]{border-color:var(--amber); box-shadow:inset 0 0 0 1px var(--amber);}
+  .qs-provider .pmono{
+    width:42px; height:42px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel-2); display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:600; font-size:13px; letter-spacing:0.02em;
+  }
+  .qs-provider .pname{font-family:var(--font-display); font-weight:600; font-size:16px;}
+  .qs-provider .pdesc{font-size:12.5px; color:var(--text-dim); line-height:1.5;}
+  .qs-provider .pstate{
+    margin-top:auto; font-family:var(--font-mono); font-size:11px; letter-spacing:0.06em;
+    text-transform:uppercase; color:var(--text-faint);
+  }
+  .qs-provider[aria-selected="true"] .pstate{color:var(--amber);}
+  .qs-provider[aria-selected="true"] .pstate::before{content:'✓ ';}
+  .qs-provider[aria-disabled="true"]{
+    cursor:not-allowed; border-style:dashed; background:transparent; opacity:0.6;
+  }
+  .qs-provider[aria-disabled="true"]:hover{transform:none; border-color:var(--line);}
+  .qs-provider[aria-disabled="true"] .pstate{
+    align-self:flex-start; border:1px solid var(--line); border-radius:4px; padding:2px 7px;
+  }
+  .qs-panel{display:none; margin-top:32px;}
   .qs-panel.active{display:block;}
+  .qs-panel h3{font-family:var(--font-display); font-weight:600; font-size:20px;}
+  .qs-panel .pintro{margin-top:8px; font-size:14.5px; color:var(--text-dim); max-width:720px;}
+  .qs-panel .pintro code, .qs-step .sdesc code, .qs-note code{color:var(--blue); font-size:12.5px;}
+  .qs-panel .pintro a, .qs-note a{color:var(--amber);}
+  .qs-step .sdesc pre.code{margin-top:10px;}
+  .qs-endpoints{
+    margin-top:24px; border:1px solid var(--line); border-radius:8px; overflow:hidden;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+  }
+  .qs-endpoint{padding:12px 16px; border-right:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft);}
+  .qs-endpoint .elabel{font-family:var(--font-mono); font-size:11px; color:var(--text-faint); letter-spacing:0.06em; text-transform:uppercase;}
+  .qs-endpoint .evalue{font-family:var(--font-mono); font-size:13px; color:var(--text); word-break:break-all;}
+  .qs-note{
+    margin-top:20px; font-size:13.5px; color:var(--text-dim); line-height:1.6;
+    border-left:2px solid var(--line); padding-left:14px;
+  }
+  .qs-note b{color:var(--text); font-weight:500;}
+  .qs-step > div:last-child{flex:1; min-width:0;}
+  .code-wrap{position:relative;}
+  .code-wrap pre.code{padding-right:84px;}
+  .code-wrap .copy-btn{position:absolute; top:10px; right:10px; float:none; margin:0;}
   .qs-steps{margin:24px 0; display:flex; flex-direction:column; gap:16px;}
   .qs-step{display:flex; gap:16px;}
   .qs-num{
@@ -359,6 +408,7 @@
     .modgrid{grid-template-columns:1fr;}
     .capgrid{grid-template-columns:1fr;}
     .backends{grid-template-columns:1fr;}
+    .qs-providers{grid-template-columns:repeat(2, 1fr);}
     .resgrid{grid-template-columns:1fr;}
     .navlinks{display:none;}
     .log-entry{grid-template-columns:1fr; gap:6px;}
@@ -542,46 +592,35 @@
     <div class="section-head">
       <div class="kicker"><span class="led on"></span> The console</div>
       <h2>What it actually looks like.</h2>
-      <p>The Kockpit web console, in the wild — audit search across two different platforms,
-      dynamic configuration, and feature flipping, all reading from the same manifest-driven setup.</p>
+      <p>The Kockpit web console — audit search, dynamic configuration, and feature flipping,
+      all driven by the same manifest.</p>
     </div>
 
     <div class="console-tabs" role="tablist">
-      <button class="console-tab active" data-ctab="rcu"><span class="led on"></span>Audits — RCU</button>
-      <button class="console-tab" data-ctab="samples"><span class="led on"></span>Audits — Samples</button>
+      <button class="console-tab active" data-ctab="samples"><span class="led on"></span>Audits</button>
       <button class="console-tab" data-ctab="dynaconfig"><span class="led blue"></span>Dyna Config</button>
       <button class="console-tab" data-ctab="featureflip"><span class="led amber"></span>Feature Flipping</button>
     </div>
 
-    <div class="console-panel active" data-cpanel="rcu">
+    <div class="console-panel active" data-cpanel="samples">
       <div class="screen">
         <div class="screen-bar">
           <span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
-          <span class="screen-path">rcu / rec (rcu-manifest-rec.json)</span>
+          <span class="screen-path">kockpit / local — Audits (kockpit-manifest-local.json)</span>
         </div>
-        <img src="screenshots/audits-rcu.webp" alt="Kockpit console showing the RCU Audits list, with request ID, method, path, GBID, duration and status columns across almost 500,000 audit records" loading="lazy">
+        <img src="screenshots/audits-samples.webp" alt="Kockpit console Audits screen with the saved filter &quot;kockpit-samples-all, en erreur&quot; applied, listing the sample application's failed POST and DELETE calls with their app ID, request ID, method, path, duration and 400 or 500 status" loading="lazy">
       </div>
       <p class="console-caption">Full-text and field search across audit events — request ID, path, method, status,
-      or any custom field — with pagination built for datasets in the hundreds of thousands of records.</p>
-    </div>
-
-    <div class="console-panel" data-cpanel="samples">
-      <div class="screen">
-        <div class="screen-bar">
-          <span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
-          <span class="screen-path">wcplatform / dev (kockpit-wcplatform-samples-manifest-dev.json)</span>
-        </div>
-        <img src="screenshots/audits-samples.webp" alt="Kockpit console showing Samples Audits for the wcplatform manifest, listing app ID, request ID, method, path, duration and status" loading="lazy">
-      </div>
-      <p class="console-caption">The same audit view scoped to a different manifest — each team or platform gets
-      its own manifest file, browsable from the same console without standing up a separate deployment.</p>
+      or any custom field — plus saved filters declared in the manifest, here the sample application's failed calls.
+      Each team or platform gets its own manifest file, browsable from the same console without standing up a
+      separate deployment.</p>
     </div>
 
     <div class="console-panel" data-cpanel="dynaconfig">
       <div class="screen">
         <div class="screen-bar">
           <span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
-          <span class="screen-path">wcplatform / dev — Dyna Config</span>
+          <span class="screen-path">kockpit / local — Dyna Config</span>
         </div>
         <img src="screenshots/dyna-config.webp" alt="Kockpit console Dyna Config screen showing three configured keys, their sync status, and inline edit controls" loading="lazy">
       </div>
@@ -593,12 +632,12 @@
       <div class="screen">
         <div class="screen-bar">
           <span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
-          <span class="screen-path">wcplatform / dev — Feature Flipping</span>
+          <span class="screen-path">kockpit / local — Feature Flipping</span>
         </div>
-        <img src="screenshots/feature-flipping.webp" alt="Kockpit console Feature Flipping screen showing three feature keys with enabled and disabled toggles, one with an expiry date" loading="lazy">
+        <img src="screenshots/feature-flipping.webp" alt="Kockpit console Feature Flipping screen for the Kockpit Sample Application, showing its compression.enabled feature key switched on, with Properties and History tabs" loading="lazy">
       </div>
       <p class="console-caption">Feature keys with on/off toggles and optional expiry dates, plus a history tab
-      for tracking who changed what and when.</p>
+      for tracking who changed what and when — flipped live, without a redeploy.</p>
     </div>
   </div>
 </section>
@@ -655,107 +694,183 @@
   <div class="wrap">
     <div class="section-head">
       <div class="kicker"><span class="led amber"></span> Quick start</div>
-      <h2>Get a console running.</h2>
-      <p>Pick the path that matches your environment. Every image is published to <code class="mono" style="color:var(--blue)">ghcr.io/mahieddine-ichir/kockpit</code>.</p>
+      <h2>Get a console running in minutes.</h2>
+      <p>Each provider has a ready-made Docker Compose stack in the repository's <code class="mono" style="color:var(--blue)">docker/</code>
+      folder. Images come from <code class="mono" style="color:var(--blue)">ghcr.io/mahieddine-ichir/kockpit</code> with their <code class="mono" style="color:var(--blue)">latest</code> tag.</p>
     </div>
 
-    <div class="qs-tabs" role="tablist">
-      <button class="qs-tab active" data-tab="console">Console (Docker)</button>
-      <button class="qs-tab" data-tab="filesystem">Backend — filesystem</button>
-      <button class="qs-tab" data-tab="aws">Backend — AWS</button>
-      <button class="qs-tab" data-tab="k8s">Kubernetes</button>
+    <p class="qs-prereq"><span><b>Prerequisites:</b> Docker with Compose <code>v2.20+</code> (the stacks use <code>include</code>),
+    about 4&nbsp;GB of memory for Docker, and a clone of the repository:
+    <code>git clone https://github.com/mahieddine-ichir/kockpit.git &amp;&amp; cd kockpit</code>.
+    The stacks share container names and ports, so run one at a time.</span></p>
+
+    <div class="qs-providers" role="tablist" aria-label="Choose a provider">
+      <button class="qs-provider" role="tab" id="qs-tab-kafka" aria-controls="qs-panel-kafka" aria-selected="true" data-provider="kafka">
+        <span class="pmono" aria-hidden="true">KF</span>
+        <span class="pname">Kafka</span>
+        <span class="pdesc">Kafka, OpenSearch and the Kockpit apps, with the backend on local filesystem storage.</span>
+        <span class="pstate">Selected</span>
+      </button>
+      <button class="qs-provider" role="tab" id="qs-tab-azure" aria-controls="qs-panel-azure" aria-selected="false" data-provider="azure">
+        <span class="pmono" aria-hidden="true">AZ</span>
+        <span class="pname">Azure</span>
+        <span class="pdesc">Azure Storage emulated by Azurite, Kafka, OpenSearch and the Kockpit apps, plus a sample app.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="qs-tab-aws" aria-controls="qs-panel-aws" aria-selected="false" data-provider="aws">
+        <span class="pmono" aria-hidden="true">AWS</span>
+        <span class="pname">AWS</span>
+        <span class="pdesc">LocalStack (S3, SQS, SNS, Kinesis, DynamoDB) and OpenSearch, for running the apps from your IDE.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="qs-tab-kube" aria-selected="false" aria-disabled="true" data-provider="kube" title="Kubernetes quick start coming soon">
+        <span class="pmono" aria-hidden="true">K8s</span>
+        <span class="pname">Kubernetes</span>
+        <span class="pdesc">Deploy the Kockpit stack on a cluster.</span>
+        <span class="pstate">Coming soon</span>
+      </button>
     </div>
 
-    <div class="qs-panel active" data-panel="console">
+    <!-- ===== Kafka ===== -->
+    <div class="qs-panel active" role="tabpanel" id="qs-panel-kafka" aria-labelledby="qs-tab-kafka" data-panel="kafka">
+      <h3>Kafka stack</h3>
+      <p class="pintro"><code>docker/kafka/docker-compose-full.yml</code> starts Kafka, OpenSearch and OpenSearch Dashboards,
+      plus the audit stream, the backend (filesystem storage) and the console. The backend reads manifests and audit
+      payloads from the repository's <code>data/</code> folder, or from <code>KOCKPIT_DATA_DIR</code> if you set it.</p>
       <div class="qs-steps">
         <div class="qs-step">
           <div class="qs-num">1</div>
-          <div><div class="stitle">Pull and run the console image</div><div class="sdesc">This starts the Kockpit web console on its default port.</div></div>
+          <div><div class="stitle">Give the backend a manifest</div>
+            <div class="sdesc">The console lists the services declared in manifests. Copy the sample one into the data folder.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">mkdir</span> <span class="flag">-p</span> data/manifests &amp;&amp; <span class="cmd">cp</span> docker/manifests/*.json data/manifests/</code></pre></div>
+            </div></div>
         </div>
         <div class="qs-step">
           <div class="qs-num">2</div>
-          <div><div class="stitle">Point it at a backend API</div><div class="sdesc">The console needs a running backend application (see the other tabs) to bind to.</div></div>
-        </div>
-      </div>
-      <pre class="code"><code><span class="comment"># run the Kockpit web console</span>
-<span class="cmd">docker run</span> ghcr.io/mahieddine-ichir/kockpit/kockpit-console:latest</code></pre>
-    </div>
-
-    <div class="qs-panel" data-panel="filesystem">
-      <div class="qs-steps">
-        <div class="qs-step">
-          <div class="qs-num">1</div>
-          <div><div class="stitle">Start OpenSearch</div><div class="sdesc">The audit search engine needs a reachable OpenSearch endpoint.</div></div>
-        </div>
-        <div class="qs-step">
-          <div class="qs-num">2</div>
-          <div><div class="stitle">Mount a data directory</div><div class="sdesc">Filesystem mode reads and writes manifests and audit data to a local volume.</div></div>
+          <div><div class="stitle">Start the stack</div>
+            <div class="sdesc">Images are pulled again on every <code>up</code>, so you always run the latest build.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">cd</span> docker/kafka
+<span class="cmd">docker compose</span> <span class="flag">-f</span> docker-compose-full.yml up <span class="flag">-d</span></code></pre></div>
+            </div></div>
         </div>
         <div class="qs-step">
           <div class="qs-num">3</div>
-          <div><div class="stitle">Run the backend</div><div class="sdesc">Exposes the API the console and your services talk to on port 8080.</div></div>
+          <div><div class="stitle">Load the sample audits (optional)</div>
+            <div class="sdesc">1000 anonymised audits, dated September 2025: widen the console's time range to see them.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">docker exec</span> <span class="flag">-w</span> /init-data opensearch bash init-data.sh</code></pre></div>
+            </div></div>
+        </div>
+        <div class="qs-step">
+          <div class="qs-num">4</div>
+          <div><div class="stitle">Open the console</div>
+            <div class="sdesc">Go to <code>http://localhost:3000</code>. Audits your own services send to the <code>audits</code> topic
+            on <code>localhost:29092</code> show up as the stream indexes them.</div></div>
         </div>
       </div>
-      <pre class="code"><code><span class="cmd">docker run</span> -p 8080:8080 \
-  <span class="flag">-e</span> OPENSEARCH_ENDPOINTS=http://opensearch:9200 \
-  <span class="flag">-e</span> kockpit.sdk.manifest.filesystem.path=/data/manifests \
-  <span class="flag">-e</span> kockpit.sdk.filesystem.local_directory=/data \
-  <span class="flag">-v</span> ~/kockpit/data:/data \
-  ghcr.io/mahieddine-ichir/kockpit/kockpit-backend-application-filesystem</code></pre>
+      <div class="qs-endpoints">
+        <div class="qs-endpoint"><div class="elabel">Console</div><div class="evalue">http://localhost:3000</div></div>
+        <div class="qs-endpoint"><div class="elabel">Backend API</div><div class="evalue">http://localhost:8080/api</div></div>
+        <div class="qs-endpoint"><div class="elabel">Audit stream</div><div class="evalue">http://localhost:8081</div></div>
+        <div class="qs-endpoint"><div class="elabel">OpenSearch</div><div class="evalue">http://localhost:9200</div></div>
+        <div class="qs-endpoint"><div class="elabel">Dashboards</div><div class="evalue">http://localhost:5601</div></div>
+        <div class="qs-endpoint"><div class="elabel">Kafka</div><div class="evalue">localhost:29092 (host) · kafka:9092 (containers)</div></div>
+      </div>
+      <p class="qs-note"><b>Stop:</b> <code>docker compose -f docker-compose-full.yml down</code> from <code>docker/kafka</code>.
+      Infrastructure only, to run the apps from your IDE: <code>docker compose up -d</code> in the same folder.</p>
     </div>
 
-    <div class="qs-panel" data-panel="aws">
+    <!-- ===== Azure ===== -->
+    <div class="qs-panel" role="tabpanel" id="qs-panel-azure" aria-labelledby="qs-tab-azure" data-panel="azure">
+      <h3>Azure stack</h3>
+      <p class="pintro"><code>docker/azure/docker-compose-full.yml</code> starts Azurite (the Azure Storage emulator), Kafka,
+      OpenSearch and Dashboards, plus the audit stream, the backend (Azure Storage), the console and a sample application.
+      No Azure account is needed: the blob containers are created in Azurite and the sample manifest is uploaded on startup.</p>
       <div class="qs-steps">
         <div class="qs-step">
           <div class="qs-num">1</div>
-          <div><div class="stitle">Configure AWS credentials</div><div class="sdesc">Uses the default AWS credentials chain — env vars, credentials file, or an IAM role.</div></div>
+          <div><div class="stitle">Start the stack</div>
+            <div class="sdesc">
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">cd</span> docker/azure
+<span class="cmd">docker compose</span> <span class="flag">-f</span> docker-compose-full.yml up <span class="flag">-d</span></code></pre></div>
+            </div></div>
         </div>
         <div class="qs-step">
           <div class="qs-num">2</div>
-          <div><div class="stitle">Point at your region</div><div class="sdesc">S3 handles file-based communication, Kinesis carries audit notifications.</div></div>
+          <div><div class="stitle">Generate audits with the sample app</div>
+            <div class="sdesc">Each call is audited and sent to Kafka within 5 seconds. <code>createMessage</code> and the
+            <code>DELETE</code> fail on purpose part of the time, to give you some errors to look at.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">curl</span> http://localhost:8082/sample-app/api/sayHello/kockpit
+<span class="cmd">curl</span> http://localhost:8082/sample-app/api/facts
+<span class="cmd">curl</span> <span class="flag">-X</span> POST http://localhost:8082/sample-app/api/createMessage \
+  <span class="flag">-H</span> <span class="str">'Content-Type: application/json'</span> <span class="flag">-d</span> <span class="str">'{"message":"hello"}'</span>
+<span class="cmd">curl</span> <span class="flag">-X</span> DELETE http://localhost:8082/sample-app/api/sayHello</code></pre></div>
+            </div></div>
         </div>
         <div class="qs-step">
           <div class="qs-num">3</div>
-          <div><div class="stitle">Run the backend</div><div class="sdesc">Same port, same console binding — only the storage layer changes.</div></div>
+          <div><div class="stitle">Load the sample audits (optional)</div>
+            <div class="sdesc">The Azure backend searches the <code>audit-data</code> index, so pass its name.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">docker exec</span> <span class="flag">-w</span> /init-data <span class="flag">-e</span> INDEX_NAME=audit-data opensearch bash init-data.sh</code></pre></div>
+            </div></div>
+        </div>
+        <div class="qs-step">
+          <div class="qs-num">4</div>
+          <div><div class="stitle">Open the console</div>
+            <div class="sdesc">Go to <code>http://localhost:3000</code> and pick the <code>kockpit / local</code> manifest. Its saved
+            filters show the sample app's successful and failed calls.</div></div>
         </div>
       </div>
-      <pre class="code"><code><span class="cmd">docker run</span> -p 8080:8080 \
-  <span class="flag">-e</span> kockpit.sdk.aws.region=eu-west-1 \
-  <span class="flag">-e</span> kockpit.service.aws.region=eu-west-1 \
-  <span class="flag">-e</span> OPENSEARCH_ENDPOINTS=http://opensearch:9200 \
-  ghcr.io/mahieddine-ichir/kockpit/kockpit-backend-application-aws</code></pre>
+      <div class="qs-endpoints">
+        <div class="qs-endpoint"><div class="elabel">Console</div><div class="evalue">http://localhost:3000</div></div>
+        <div class="qs-endpoint"><div class="elabel">Backend API</div><div class="evalue">http://localhost:8080/api</div></div>
+        <div class="qs-endpoint"><div class="elabel">Sample app</div><div class="evalue">http://localhost:8082/sample-app</div></div>
+        <div class="qs-endpoint"><div class="elabel">Audit stream</div><div class="evalue">http://localhost:8081</div></div>
+        <div class="qs-endpoint"><div class="elabel">Azurite blob</div><div class="evalue">http://localhost:10000/devstoreaccount1</div></div>
+        <div class="qs-endpoint"><div class="elabel">OpenSearch · Dashboards</div><div class="evalue">:9200 · :5601</div></div>
+      </div>
+      <p class="qs-note"><b>Real storage account:</b> <code>cp .env.azure .env</code> in <code>docker/azure</code>, fill in the
+      <code>STORAGE_*</code> and <code>MANIFESTS_STORAGE_*</code> values, then start the stack the same way.<br>
+      <b>Manifests:</b> the files in <code>docker/manifests</code> are uploaded on every <code>up</code> and overwrite the copies in
+      Azurite, so edit them there rather than from the console.<br>
+      <b>Stop:</b> <code>docker compose -f docker-compose-full.yml down</code> (add <code>-v</code> to also delete the Azurite and OpenSearch data).</p>
     </div>
 
-    <div class="qs-panel" data-panel="k8s">
+    <!-- ===== AWS ===== -->
+    <div class="qs-panel" role="tabpanel" id="qs-panel-aws" aria-labelledby="qs-tab-aws" data-panel="aws">
+      <h3>AWS stack</h3>
+      <p class="pintro"><code>docker/aws/docker-compose.yml</code> starts LocalStack and OpenSearch. On startup, LocalStack's
+      init scripts create the S3 buckets (with the sample manifest), SQS queues, SNS topics, Kinesis streams and DynamoDB
+      tables. This stack provides the AWS infrastructure only: the Kockpit applications are run from your IDE against it.</p>
       <div class="qs-steps">
         <div class="qs-step">
           <div class="qs-num">1</div>
-          <div><div class="stitle">Adapt this starter manifest</div><div class="sdesc">A minimal Deployment + Service for the filesystem backend, as a starting point for your own cluster conventions.</div></div>
+          <div><div class="stitle">Start LocalStack and OpenSearch</div>
+            <div class="sdesc">If your LocalStack version requires one, export <code>LOCALSTACK_AUTH_TOKEN</code> first.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">cd</span> docker/aws
+<span class="cmd">docker compose</span> up <span class="flag">-d</span></code></pre></div>
+            </div></div>
         </div>
         <div class="qs-step">
           <div class="qs-num">2</div>
-          <div><div class="stitle">Wire in your OpenSearch endpoint</div><div class="sdesc">Replace the env values with your cluster's real service names or a ConfigMap.</div></div>
+          <div><div class="stitle">Check the resources</div>
+            <div class="sdesc">The LocalStack gateway listens on <code>localhost:4566</code>, region <code>eu-west-1</code>.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">docker exec</span> localstack_console_services awslocal s3 ls
+<span class="cmd">docker exec</span> localstack_console_services awslocal kinesis list-streams</code></pre></div>
+            </div></div>
+        </div>
+        <div class="qs-step">
+          <div class="qs-num">3</div>
+          <div><div class="stitle">Run the Kockpit apps against it</div>
+            <div class="sdesc">Build the AWS flavours with the <code>aws</code> Maven profile and run the backend and the audit stream
+            from your IDE, pointing them at <code>http://localhost:4566</code> and <code>http://localhost:9200</code>.</div></div>
         </div>
       </div>
-      <pre class="code"><code><span class="comment"># starter manifest — adapt to your cluster conventions</span>
-<span class="flag">apiVersion</span>: apps/v1
-<span class="flag">kind</span>: Deployment
-<span class="flag">metadata</span>:
-  <span class="flag">name</span>: kockpit-backend
-<span class="flag">spec</span>:
-  <span class="flag">replicas</span>: <span class="str">1</span>
-  <span class="flag">selector</span>:
-    <span class="flag">matchLabels</span>: { <span class="flag">app</span>: kockpit-backend }
-  <span class="flag">template</span>:
-    <span class="flag">metadata</span>:
-      <span class="flag">labels</span>: { <span class="flag">app</span>: kockpit-backend }
-    <span class="flag">spec</span>:
-      <span class="flag">containers</span>:
-        - <span class="flag">name</span>: kockpit-backend
-          <span class="flag">image</span>: ghcr.io/mahieddine-ichir/kockpit/kockpit-backend-application-filesystem
-          <span class="flag">ports</span>: [{ <span class="flag">containerPort</span>: <span class="str">8080</span> }]
-          <span class="flag">env</span>:
-            - { <span class="flag">name</span>: OPENSEARCH_ENDPOINTS, <span class="flag">value</span>: <span class="str">"http://opensearch:9200"</span> }</code></pre>
+      <div class="qs-endpoints">
+        <div class="qs-endpoint"><div class="elabel">LocalStack gateway</div><div class="evalue">http://localhost:4566</div></div>
+        <div class="qs-endpoint"><div class="elabel">OpenSearch</div><div class="evalue">http://localhost:9200</div></div>
+        <div class="qs-endpoint"><div class="elabel">Dashboards</div><div class="evalue">http://localhost:5601</div></div>
+      </div>
+      <p class="qs-note"><b>Stop:</b> <code>docker compose down</code> from <code>docker/aws</code>.</p>
     </div>
   </div>
 </section>
@@ -808,14 +923,37 @@
     });
   });
 
-  document.querySelectorAll('.qs-tab').forEach(function(tab){
-    tab.addEventListener('click', function(){
-      var target = tab.getAttribute('data-tab');
-      document.querySelectorAll('.qs-tab').forEach(function(t){ t.classList.remove('active'); });
-      document.querySelectorAll('.qs-panel').forEach(function(p){ p.classList.remove('active'); });
-      tab.classList.add('active');
-      document.querySelector('.qs-panel[data-panel="' + target + '"]').classList.add('active');
+  // quick start: provider cards (disabled ones, like Kubernetes, are not selectable)
+  document.querySelectorAll('.qs-provider').forEach(function(card){
+    card.addEventListener('click', function(){
+      if (card.getAttribute('aria-disabled') === 'true') return;
+      var target = card.getAttribute('data-provider');
+      document.querySelectorAll('.qs-provider').forEach(function(c){
+        if (c.getAttribute('aria-disabled') === 'true') return;
+        var selected = c === card;
+        c.setAttribute('aria-selected', selected ? 'true' : 'false');
+        c.querySelector('.pstate').textContent = selected ? 'Selected' : 'Select';
+      });
+      document.querySelectorAll('.qs-panel').forEach(function(p){
+        p.classList.toggle('active', p.getAttribute('data-panel') === target);
+      });
     });
+  });
+
+  // copy buttons on the quick start code blocks
+  document.querySelectorAll('#quickstart .code-wrap').forEach(function(wrap){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var text = wrap.querySelector('code').innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied ✓';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 1500);
+      });
+    });
+    wrap.appendChild(btn);
   });
 </script>
 
