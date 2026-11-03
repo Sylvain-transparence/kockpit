@@ -15,10 +15,11 @@ kockpit:
   env: local
   app-id: ${spring.application.name}
 
+  # the sample shows every feature in the console: messages go through the storage of the image's profile
+  # (filesystem, Azure Storage or S3), and are polled back for feature flags and dynamic configuration
   communication:
-    enabled: false
     polling:
-      enabled: false
+      enabled: true
 
     azure:
       storage:
@@ -27,7 +28,7 @@ kockpit:
         key: ${STORAGE_KEY}
         container: ${STORAGE_CONTAINER:data}
     filesystem:
-      enabled: false
+      enabled: true
       path: ${FS_STORAGE_PATH}
 
     poller:
@@ -49,11 +50,10 @@ kockpit:
     polling:
       enabled: true
   dyna-config:
-    enabled: false
+    enabled: true
+  # heartbeats make the sample app show up in the console's Instances health page
   heartbeat:
-    enabled: false
-    polling:
-      enabled: false
+    enabled: true
 
 logging:
   level:
