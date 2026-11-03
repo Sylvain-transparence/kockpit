@@ -10,14 +10,6 @@ import {
 } from 'lucide-react';
 import {getAppDistributionData, getOverTimeByAppId, getStatusDistributionByAppId} from "../services/api.js";
 
-/*
-const
-    return (<Area type="monotone" dataKey={key} stackId={index} stroke= fill= />)
-})
-}
-<Area type="monotone" dataKey="rcu-api" stackId="1" stroke= fill= />
- */
-
 function fillColor(index) {
     if (index === 0) {
         return "#93c5fd"

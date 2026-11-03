@@ -1,20 +1,20 @@
 {
-  "domain": "wcxss",
+  "domain": "insurance",
   "env": "local",
   "groups": ["XSS2"],
   "applications": [
     {
-      "id": "wcxss-insurance2",
+      "id": "insurance-insurance2",
       "label": "Insurance Local 2",
       "subDomain": "insurance",
       "services": {
         "audit": [
           {
-            "name": "wcxss-insurance",
+            "name": "insurance-insurance",
             "label": "API Insurance Local 2",
             "appIds": [
-              "wcxss-insurance-quotation",
-              "wcxss-insurance-purchase"
+              "insurance-insurance-quotation",
+              "insurance-insurance-purchase"
             ],
             "resultColumns": [
               {

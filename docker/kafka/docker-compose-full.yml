@@ -1,0 +1,69 @@
+# Full local stack: the Kafka infrastructure of docker-compose.yml (Kafka, OpenSearch, OpenSearch Dashboards)
+# plus the Kockpit applications, pulled from the GitHub Container Registry with their `latest` tag
+# (built from the default branch).
+#
+#   cd docker/kafka
+#   docker compose -f docker-compose-full.yml up -d
+#
+# Endpoints:
+#   - Console UI:   http://localhost:3000
+#   - Backend API:  http://localhost:8080/api
+#   - Audit stream: http://localhost:8081
+#   - OpenSearch:   http://localhost:9200, Dashboards: http://localhost:5601
+#   - Kafka:        localhost:29092 (host), kafka:9092 (containers)
+#
+# The backend uses the filesystem storage: manifests and audit payloads are read from KOCKPIT_DATA_DIR
+# (defaults to the repository's data/ folder).
+include:
+  - docker-compose.yml
+
+services:
+  kockpit-audit-stream-application:
+    image: ghcr.io/mahieddine-ichir/kockpit/kockpit-audit-stream-application-kafka:latest
+    container_name: kockpit-audit-stream-application
+    pull_policy: always
+    ports:
+      - "8081:8081"
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - OPENSEARCH_ENDPOINTS=http://opensearch:9200
+      - INDEX_SUFFIX=auditdata
+      - kockpit.audit.stream.kafka.topics=audits
+    depends_on:
+      kafka:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+
+  kockpit-backend-application:
+    image: ghcr.io/mahieddine-ichir/kockpit/kockpit-backend-application-filesystem:latest
+    container_name: kockpit-backend-application
+    pull_policy: always
+    ports:
+      - "8080:8080"
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - OPENSEARCH_ENDPOINTS=http://opensearch:9200
+      # must match the audit stream's INDEX_SUFFIX
+      - INDEX_NAME=auditdata
+      - FS_MANIFESTS_PATH=/data/manifests
+      - FS_STORAGE_PATH=/data
+    volumes:
+      - ${KOCKPIT_DATA_DIR:-../../data}:/data
+    depends_on:
+      kafka:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+
+  kockpit-console:
+    image: ghcr.io/mahieddine-ichir/kockpit/kockpit-console:latest
+    container_name: kockpit-console
+    pull_policy: always
+    ports:
+      - "3000:80"
+    environment:
+      # nginx proxies /api to ${KOCKPIT_BACKEND}/api
+      - KOCKPIT_BACKEND=http://kockpit-backend-application:8080
+    depends_on:
+      - kockpit-backend-application

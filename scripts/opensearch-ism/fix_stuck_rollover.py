@@ -22,7 +22,7 @@ Python 3.9+ standard library only. Default is a dry run; --apply makes the chang
 
   ./fix_stuck_rollover.py --host https://localhost:9200 --insecure                # plan
   ./fix_stuck_rollover.py --host https://localhost:9200 --insecure --apply        # asks to confirm
-  ./fix_stuck_rollover.py --host https://localhost:9200 --insecure --index-pattern 'wcoff-*'
+  ./fix_stuck_rollover.py --host https://localhost:9200 --insecure --index-pattern 'offers-*'
 """
 import argparse
 import collections

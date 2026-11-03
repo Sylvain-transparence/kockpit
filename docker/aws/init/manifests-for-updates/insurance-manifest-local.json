@@ -1,10 +1,10 @@
 {
-  "domain": "wcxss",
+  "domain": "insurance",
   "env": "local",
-  "groups": ["XSS", "WCC"],
+  "groups": ["INSURANCE", "MESSAGING"],
   "applications": [
     {
-      "id": "wcxss-sbk",
+      "id": "insurance-sbk",
       "label": "StayBooking",
       "subDomain": "fnb",
       "services": {
@@ -57,17 +57,17 @@
       }
     },
     {
-      "id": "wcxss-insurance",
+      "id": "insurance-insurance",
       "label": "Insurance Local",
       "subDomain": "insurance",
       "services": {
         "audit": [
           {
-            "name": "wcxss-insurance",
+            "name": "insurance-insurance",
             "label": "API Insurance Local",
             "appIds": [
-              "wcxss-insurance-quotation",
-              "wcxss-insurance-purchase"
+              "insurance-insurance-quotation",
+              "insurance-insurance-purchase"
             ],
             "resultColumns": [
               {
@@ -184,7 +184,7 @@
       }
     },
     {
-      "id": "wcxss-insurance-quotation-v1",
+      "id": "insurance-insurance-quotation-v1",
       "label": "Insurance Quotation",
       "subDomain": "insurance",
       "services": {
@@ -197,7 +197,7 @@
       }
     },
     {
-      "id": "wcxss-insurance-quotation-v2",
+      "id": "insurance-insurance-quotation-v2",
       "label": "Insurance Quotation",
       "subDomain": "insurance",
       "services": {
@@ -210,7 +210,7 @@
       }
     },
     {
-      "id": "wcxss-insurance-purchase",
+      "id": "insurance-insurance-purchase",
       "label": "Insurance Purchase",
       "subDomain": "insurance",
       "services": {
@@ -227,7 +227,7 @@
                 "label": "Group id"
               },
               {
-                "name": "X-Wcp-TraceId",
+                "name": "X-Trace-Id",
                 "label": "Trace Id"
               },
               {
@@ -298,16 +298,16 @@
       }
     },
     {
-      "id": "wcxss-restaurants-v1",
+      "id": "insurance-restaurants-v1",
       "label": "XSS Restaurants API V1",
       "subDomain": "fnb",
       "services": {
         "audit": [
           {
-            "name": "wcxss-restaurants-v1",
+            "name": "insurance-restaurants-v1",
             "label": "Ref Restau - API v1",
             "appIds": [
-              "wcxss-restaurants-v1"
+              "insurance-restaurants-v1"
             ],
             "resultColumns": [
               {
@@ -389,16 +389,16 @@
       }
     },
     {
-      "id": "wcxss-restaurants-v2",
+      "id": "insurance-restaurants-v2",
       "label": "XSS Restaurants API V2",
       "subDomain": "fnb",
       "services": {
         "audit": [
           {
-            "name": "wcxss-restaurants-v2",
+            "name": "insurance-restaurants-v2",
             "label": "Ref Restau - API v2",
             "appIds": [
-              "wcxss-restaurants-v2"
+              "insurance-restaurants-v2"
             ],
             "resultColumns": [
               {
@@ -480,16 +480,16 @@
       }
     },
     {
-      "id": "wcxss-order-trap",
+      "id": "insurance-order-trap",
       "label": "XSS Order Trap API",
       "subDomain": "insurance",
       "services": {
         "audit": [
           {
-            "name": "wcxss-order-trap",
+            "name": "insurance-order-trap",
             "label": "API Order Trap",
             "appIds": [
-              "wcxss-order-trap"
+              "insurance-order-trap"
             ],
             "resultColumns": [
               {
@@ -571,16 +571,16 @@
       }
     },
     {
-      "id": "wcxss-restaurants-bulk-task",
+      "id": "insurance-restaurants-bulk-task",
       "label": "XSS Bulk Restaurants",
       "subDomain": "fnb",
       "services": {
         "audit": [
           {
-            "name": "wcxss-restaurants-bulk-task",
+            "name": "insurance-restaurants-bulk-task",
             "label": "Ref Restau - Bulk",
             "appIds": [
-              "wcxss-restaurants-bulk-task"
+              "insurance-restaurants-bulk-task"
             ],
             "resultColumns": [
               {
@@ -627,16 +627,16 @@
       }
     },
     {
-      "id": "wcxss-fnbv2-restaurants-connector-apicontent",
+      "id": "insurance-fnbv2-restaurants-connector-apicontent",
       "label": "Fnb Connector API Content",
       "subDomain": "fnb",
       "services": {
         "audit": [
           {
-            "name": "wcxss-fnbv2-restaurants-connector-tars-apicontent",
+            "name": "insurance-fnbv2-restaurants-connector-tars-apicontent",
             "label": "Ref Restau - Alim - Conn TARS API Content",
             "appIds": [
-              "wcxss-fnbv2-restaurants-connector-tars-apicontent"
+              "insurance-fnbv2-restaurants-connector-tars-apicontent"
             ],
             "resultColumns": [
               {
@@ -687,16 +687,16 @@
       }
     },
     {
-      "id": "wcxss-fnb-restaurants-connector-wc-media",
+      "id": "insurance-fnb-restaurants-connector-wc-media",
       "label": "Fnb Connector WC Media",
       "subDomain": "fnb",
       "services": {
         "audit": [
           {
-            "name": "wcxss-fnb-restaurants-connector-wc-media",
+            "name": "insurance-fnb-restaurants-connector-wc-media",
             "label": "Ref Restau - Alim - Conn WC Media",
             "appIds": [
-              "wcxss-fnb-restaurants-connector-wc-media"
+              "insurance-fnb-restaurants-connector-wc-media"
             ],
             "resultColumns": [
               {
@@ -741,16 +741,16 @@
       }
     },
     {
-      "id": "wcxss-fnb-restaurants-connector-resdiary",
+      "id": "insurance-fnb-restaurants-connector-resdiary",
       "label": "Fnb Connector Resdiary",
       "subDomain": "fnb",
       "services": {
         "audit": [
           {
-            "name": "wcxss-fnb-restaurants-connector-resdiary",
+            "name": "insurance-fnb-restaurants-connector-resdiary",
             "label": "Ref Restau - Alim - Conn Resdiary",
             "appIds": [
-              "wcxss-fnb-restaurants-connector-resdiary"
+              "insurance-fnb-restaurants-connector-resdiary"
             ],
             "resultColumns": [
               {
@@ -791,16 +791,16 @@
       }
     },
     {
-      "id": "wcxss-fnb-restaurants-connector-geomaj",
+      "id": "insurance-fnb-restaurants-connector-geomaj",
       "label": "Fnb Connector tars Geomaj",
       "subDomain": "fnb",
       "services": {
         "audit": [
           {
-            "name": "wcxss-fnb-restaurants-connector-geomaj",
+            "name": "insurance-fnb-restaurants-connector-geomaj",
             "label": "Ref Restau - Alim - Conn Geomaj",
             "appIds": [
-              "wcxss-fnb-restaurants-connector-geomaj"
+              "insurance-fnb-restaurants-connector-geomaj"
             ],
             "resultColumns": [
               {

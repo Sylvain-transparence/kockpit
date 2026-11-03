@@ -21,7 +21,7 @@ import java.util.Set;
  *       empty {@code resources} meaning every service of that type) - still honoured.</li>
  *   <li>Group names match case-insensitively, and the group {@code "*"} matches every user
  *       (e.g. {@code {"groups":["*"],"resources":["audit:*"]}}: audits open to all) - as the
- *       legacy WCP console did.</li>
+ *       legacy console did.</li>
  * </ul>
  */
 public final class ManifestAccess {

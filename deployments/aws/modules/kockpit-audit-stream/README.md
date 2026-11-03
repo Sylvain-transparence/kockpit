@@ -78,7 +78,7 @@ module "kockpit-auditstream" {
   }
 }
 
-# Attach additional app-role policy (e.g. wcp-sdk-app-role)
+# Attach additional app-role policy (e.g. kockpit-sdk-app-role)
 resource "aws_iam_role_policy" "auditstream_app_role" {
   count  = local.kockpit_audit_stream_count
   name   = "kockpit-auditstream-ownrole"

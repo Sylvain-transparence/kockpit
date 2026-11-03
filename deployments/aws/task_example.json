@@ -23,11 +23,11 @@
     },
     {
       "name": "OPENSEARCH_ENDPOINTS",
-      "value": "vpc-wcp-dev-opk-domain-2gthk7dt74i6g7nzmtaxdpzhuu.eu-west-1.es.amazonaws.com"
+      "value": "vpc-my-domain-xxxxxxxxxxxx.eu-west-1.es.amazonaws.com"
     },
     {
       "name": "kockpit.audit.stream.opensearch.endpoints",
-      "value": "vpc-wcp-dev-opk-domain-2gthk7dt74i6g7nzmtaxdpzhuu.eu-west-1.es.amazonaws.com"
+      "value": "vpc-my-domain-xxxxxxxxxxxx.eu-west-1.es.amazonaws.com"
     },
     {
       "name": "aws.region",

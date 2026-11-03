@@ -1,1 +1,1 @@
-curl -s "localhost:9200/_cat/indices/rcu-audit-data-pro-ttl30d*" | awk '{print $3}' | grep -v 'rcu-audit-data-pro-ttl30d-2025.11.11-000000' | sort
+curl -s "localhost:9200/_cat/indices/kockpit-audit-data-pro-ttl30d*" | awk '{print $3}' | grep -v 'kockpit-audit-data-pro-ttl30d-2025.11.11-000000' | sort

@@ -43,7 +43,7 @@ class AuditReportHelperTest {
 
     @Test
     void load_audit_epochMillis_readAsMillis() {
-        String hitAsSource = "{\"domain\":\"rcu\",\"start\":1750197974047,\"end\":1750197978958}";
+        String hitAsSource = "{\"domain\":\"kockpit\",\"start\":1750197974047,\"end\":1750197978958}";
 
         AuditReportDocument auditReportDocument = AuditReportHelper.convertFromString(hitAsSource);
 
@@ -128,7 +128,7 @@ class AuditReportHelperTest {
     @Test
     void extract_mockHttpExchanges_domainContainsMock_returnsAllEvents() throws IOException {
         String originalJson = new String(this.getClass().getResourceAsStream("/audit_mock_exchanges.json").readAllBytes())
-                .replace("\"domain\": \"rcu\"", "\"domain\": \"rcu-mock\"");
+                .replace("\"domain\": \"kockpit\"", "\"domain\": \"sample-mock\"");
 
         List<Map<String, Object>> result = AuditReportHelper.extractMockHttpExchanges(originalJson);
 

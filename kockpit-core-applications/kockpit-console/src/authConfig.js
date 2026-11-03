@@ -13,9 +13,10 @@ import { LogLevel } from "@azure/msal-browser";
 
 export const msalConfig = {
     auth: {
-        clientId: "8cde68e8-bfaa-4c58-908a-6ae5c305561c",
-        authority: "https://login.microsoftonline.com/ebaeb74c-eeae-40f8-b755-10b0e2bf7528",
-        redirectUri: "https://kockpit.hprod.dcm.mousquetaires.com/",
+        // set at build time (e.g. in .env.production) for your own Entra ID app registration
+        clientId: import.meta.env.VITE_MSAL_CLIENT_ID || "00000000-0000-0000-0000-000000000000",
+        authority: `https://login.microsoftonline.com/${import.meta.env.VITE_MSAL_TENANT_ID || "common"}`,
+        redirectUri: import.meta.env.VITE_MSAL_REDIRECT_URI || `${window.location.origin}/`,
     },
     cache: {
         cacheLocation: "sessionStorage", // This configures where your cache will be stored

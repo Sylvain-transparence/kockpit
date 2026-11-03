@@ -64,7 +64,7 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: console-ui-builds-${{ github.ref_name }}
+          name: console-ui-builds-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref_name }}
           path: console-ui-dist.zip
           retention-days: 30
 
@@ -98,7 +98,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
+            type=sha,prefix=pr-${{ github.event.number }}-,enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and Push Docker Image

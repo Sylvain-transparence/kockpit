@@ -3,7 +3,7 @@ services:
     container_name: localstack_console_services
     image: localstack/localstack:2026.10.0
     healthcheck:
-      test: [ "CMD", "awslocal", "s3api", "wait", "bucket-exists", "--bucket", "wcp-manifest-bucket" ]
+      test: [ "CMD", "awslocal", "s3api", "wait", "bucket-exists", "--bucket", "kockpit-manifest-bucket" ]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -12,6 +12,7 @@ services:
       - "127.0.0.1:4510-4559:4510-4559"  # external services port range
     volumes:
       - ./init:/etc/localstack/init/ready.d/
+      - ../manifests:/manifests:ro
       - "/var/run/docker.sock:/var/run/docker.sock"
     environment:
       - AWS_DEFAULT_REGION=eu-west-1

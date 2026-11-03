@@ -24,13 +24,13 @@ awslocal sqs create-queue --queue-name insurance-cancellation-notif-dlq
 awslocal sqs create-queue --queue-name insurance-cancellation-notif
 awslocal sqs create-queue --queue-name insurance-payment-status-update
 awslocal sqs create-queue --queue-name insurance-payment-status-update-dlq
-awslocal sqs create-queue --queue-name wcp-samples-audit-sqs-local
-awslocal sqs create-queue --queue-name wcp-samples-sqsdlq-local
-awslocal sqs create-queue --queue-name wcp-samples-sqsdlq-local-dlq.fifo --attributes FifoQueue=true,ContentBasedDeduplication=false
-awslocal sqs create-queue --queue-name wcp-samples-sqsdlq-local.fifo --attributes FifoQueue=true,ContentBasedDeduplication=false
+awslocal sqs create-queue --queue-name kockpit-samples-audit-sqs-local
+awslocal sqs create-queue --queue-name kockpit-samples-sqsdlq-local
+awslocal sqs create-queue --queue-name kockpit-samples-sqsdlq-local-dlq.fifo --attributes FifoQueue=true,ContentBasedDeduplication=false
+awslocal sqs create-queue --queue-name kockpit-samples-sqsdlq-local.fifo --attributes FifoQueue=true,ContentBasedDeduplication=false
 awslocal sqs create-queue --queue-name sqs-sbk
 awslocal sqs create-queue --queue-name sqs-sbk-dlq
-awslocal sqs create-queue --queue-name wcp-samples-sqsdlq-dlq
+awslocal sqs create-queue --queue-name kockpit-samples-sqsdlq-dlq
 
 
 echo "sending messages in SQS"
@@ -38,8 +38,8 @@ awslocal sqs send-message --queue-url http://localhost:4566/000000000000/booking
 awslocal sqs send-message --queue-url http://localhost:4566/000000000000/insurance-cancellation-notif-dlq --message-body "body-insurance-cancellation-notif-dlq"  --message-attributes file://${BASH_SOURCE%/*}/message-attributes.json
 awslocal sqs send-message --queue-url http://localhost:4566/000000000000/insurance-cancellation-notif-dlq --message-body "body-insurance-cancellation-notif-dlq"
 awslocal sqs send-message --queue-url http://localhost:4566/000000000000/insurance-cancellation-notif-dlq --message-body file://${BASH_SOURCE%/*}/message-body.json --message-attributes file://${BASH_SOURCE%/*}/message-attributes.json
-awslocal sqs send-message --queue-url http://localhost:4566/000000000000/wcp-samples-sqsdlq-local-dlq.fifo --message-body "body-wcp-samples-sqsdlq-local-dlq" --message-deduplication-id="dedup" --message-group-id "samples-message-group-id" --message-attributes file://${BASH_SOURCE%/*}/message-attributes.json
-awslocal sqs send-message --queue-url http://localhost:4566/000000000000/wcp-samples-sqsdlq-local-dlq.fifo --message-body "body-wcp-samples-sqsdlq-local-dlq" --message-deduplication-id="dedup" --message-group-id "samples-message-group-id" --message-attributes file://${BASH_SOURCE%/*}/message-attributes.json
+awslocal sqs send-message --queue-url http://localhost:4566/000000000000/kockpit-samples-sqsdlq-local-dlq.fifo --message-body "body-kockpit-samples-sqsdlq-local-dlq" --message-deduplication-id="dedup" --message-group-id "samples-message-group-id" --message-attributes file://${BASH_SOURCE%/*}/message-attributes.json
+awslocal sqs send-message --queue-url http://localhost:4566/000000000000/kockpit-samples-sqsdlq-local-dlq.fifo --message-body "body-kockpit-samples-sqsdlq-local-dlq" --message-deduplication-id="dedup" --message-group-id "samples-message-group-id" --message-attributes file://${BASH_SOURCE%/*}/message-attributes.json
 echo "==================="
 
 

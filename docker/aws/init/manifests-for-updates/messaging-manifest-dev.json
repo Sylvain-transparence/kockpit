@@ -1,19 +1,19 @@
 {
-  "domain": "wcc",
+  "domain": "messaging",
   "env": "dev",
-  "groups": ["WCC", "SUPERADMIN"],
+  "groups": ["MESSAGING", "SUPERADMIN"],
   "applications": [
     {
-      "id": "wcc-messaging",
+      "id": "messaging-messaging",
       "label": "Messaging Dev",
       "subDomain": "wellness",
       "services": {
         "audit": [
           {
-            "name": "wcc-messaging",
-            "label": "WCC Messaging",
+            "name": "messaging-messaging",
+            "label": "Messaging",
             "appIds": [
-              "wcc-messaging"
+              "messaging-messaging"
             ],
             "resultColumns": [
               {

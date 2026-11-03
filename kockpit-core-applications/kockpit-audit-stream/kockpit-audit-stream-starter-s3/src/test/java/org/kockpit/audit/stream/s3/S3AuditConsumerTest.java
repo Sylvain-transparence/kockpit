@@ -52,7 +52,7 @@ class S3AuditConsumerTest {
     void setUp() {
         AuditReport report = new AuditReport();
         report.setId("evt-1");
-        report.setDomain("rcu");
+        report.setDomain("kockpit");
         report.setEnv("prod");
         report.setAppId("app");
         report.setTtl(1);

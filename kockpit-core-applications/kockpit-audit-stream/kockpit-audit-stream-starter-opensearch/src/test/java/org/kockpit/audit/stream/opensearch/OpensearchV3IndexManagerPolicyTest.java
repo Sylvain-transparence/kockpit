@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
  */
 class OpensearchV3IndexManagerPolicyTest {
 
-    private static final String POLICY_ID = "audit_ism_policy_wcoff-auditdata-pro-ttl30d";
+    private static final String POLICY_ID = "audit_ism_policy_offers-auditdata-pro-ttl30d";
 
     private final OpenSearchClient client = mock(OpenSearchClient.class);
     private final OpenSearchGenericClient generic = mock(OpenSearchGenericClient.class);
@@ -48,7 +48,7 @@ class OpensearchV3IndexManagerPolicyTest {
         Response created = response(200, "{}");
         when(generic.execute(any())).thenReturn(notFound, created);
 
-        manager.createISMPolicy(30, POLICY_ID, "wcoff-auditdata-pro-ttl30d");
+        manager.createISMPolicy(30, POLICY_ID, "offers-auditdata-pro-ttl30d");
 
         List<Request> requests = requests(2);
         assertThat(requests.get(1).getMethod()).isEqualTo("PUT");
@@ -57,7 +57,7 @@ class OpensearchV3IndexManagerPolicyTest {
         assertThat(body(requests.get(1)))
                 .contains(OpensearchV3IndexManager.POLICY_VERSION_MARKER)
                 .contains("\"min_index_age\": \"30d\"")
-                .contains("wcoff-auditdata-pro-ttl30d*")
+                .contains("offers-auditdata-pro-ttl30d*")
                 .doesNotContain("\"rollover\"");
     }
 
@@ -69,7 +69,7 @@ class OpensearchV3IndexManagerPolicyTest {
                         + OpensearchV3IndexManager.POLICY_VERSION_MARKER + ": ...\"}}");
         when(generic.execute(any())).thenReturn(upToDate);
 
-        manager.createISMPolicy(30, POLICY_ID, "wcoff-auditdata-pro-ttl30d");
+        manager.createISMPolicy(30, POLICY_ID, "offers-auditdata-pro-ttl30d");
 
         assertThat(requests(1).get(0).getMethod()).isEqualTo("GET");
     }
@@ -82,7 +82,7 @@ class OpensearchV3IndexManagerPolicyTest {
         Response updated = response(200, "{}");
         when(generic.execute(any())).thenReturn(outdated, updated);
 
-        manager.createISMPolicy(30, POLICY_ID, "wcoff-auditdata-pro-ttl30d");
+        manager.createISMPolicy(30, POLICY_ID, "offers-auditdata-pro-ttl30d");
 
         Request update = requests(2).get(1);
         assertThat(update.getMethod()).isEqualTo("PUT");
@@ -95,7 +95,7 @@ class OpensearchV3IndexManagerPolicyTest {
     void does_not_create_when_the_check_itself_fails() throws IOException {
         when(generic.execute(any())).thenThrow(new IllegalStateException("Connection pool shut down"));
 
-        manager.createISMPolicy(30, POLICY_ID, "wcoff-auditdata-pro-ttl30d");
+        manager.createISMPolicy(30, POLICY_ID, "offers-auditdata-pro-ttl30d");
 
         assertThat(requests(1).get(0).getMethod()).isEqualTo("GET");
     }

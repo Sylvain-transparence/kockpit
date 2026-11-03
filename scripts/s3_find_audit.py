@@ -16,13 +16,13 @@ as a plain substring. Matching records are saved as JSON next to --out.
 Requires boto3.
 
 Examples:
-  # Every wcbno app, Paris day of Sep 26 (+2h margin after)
-  ./s3_find_audit.py --profile accor-pro --bucket kockpit-audits-pro-20260720 \\
-      --domain wcbno --env pro --from "2026-09-26 00:00" --to "2026-09-27 02:00" \\
+  # Every orders app, Paris day of Sep 26 (+2h margin after)
+  ./s3_find_audit.py --profile my-aws-profile --bucket kockpit-audits-pro-20260720 \\
+      --domain orders --env pro --from "2026-09-26 00:00" --to "2026-09-27 02:00" \\
       --needle 24e7d823b3b8d7340e5179d7195457f4
 
   # Only some apps, keep going after the first hit
-  ./s3_find_audit.py ... --apps wcbno-order,wcbno-basket --all
+  ./s3_find_audit.py ... --apps orders-service,orders-basket --all
 """
 import argparse
 import json

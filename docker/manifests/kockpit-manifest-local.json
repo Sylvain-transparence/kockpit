@@ -20,7 +20,7 @@
           {
             "name": "httpStatus",
             "type": "options",
-            "options": [200, 201, 400, 404, 401, 500],
+            "options": [200, 201, 204, 400, 404, 401, 500],
             "path": "indexedKeyValues.httpStatus"
           },
           {
@@ -29,6 +29,7 @@
             "options": [
               "any-app",
               "sample-app",
+              "kockpit-samples-all",
               "kockpit-backend-application",
               "kockpit-audit-stream"
             ]
@@ -42,20 +43,22 @@
         ],
         "saved_filters": [
           {
-            "name": "samples-api, Create en erreur",
+            "name": "kockpit-samples-all, en erreur",
             "filters": [
               {
-                "path": "appId",
+                "name": "appId",
                 "values": [
-                  "rcu-api"
+                  "kockpit-samples-all"
                 ]
               },
               {
                 "name": "method",
                 "path": "indexedKeyValues.httpMethod",
                 "values": [
+                  "GET",
                   "POST",
-                  "PUT"
+                  "PUT",
+                  "DELETE"
                 ]
               },
               {
@@ -71,19 +74,22 @@
             ]
           },
           {
-            "name": "rcu-api, OK",
+            "name": "kockpit-samples-all, OK",
             "filters": [
               {
                 "name": "appId",
                 "values": [
-                  "rcu-api"
+                  "kockpit-samples-all"
                 ]
               },
               {
                 "name": "method",
                 "path": "indexedKeyValues.httpMethod",
                 "values": [
-                  "POST"
+                  "GET",
+                  "PUT",
+                  "POST",
+                  "DELETE"
                 ]
               },
               {
@@ -91,7 +97,8 @@
                 "path": "indexedKeyValues.httpStatus",
                 "values": [
                   200,
-                  201
+                  201,
+                  204
                 ]
               }
             ]

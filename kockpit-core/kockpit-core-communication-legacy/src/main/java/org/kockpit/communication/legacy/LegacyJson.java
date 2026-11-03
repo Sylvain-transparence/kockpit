@@ -6,7 +6,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Contrat de serialisation JSON des messages du systeme legacy (WCP).
+ * Contrat de serialisation JSON des messages du systeme legacy.
  *
  * <p>Contrat impose par un systeme externe : ce mapper ne doit surtout pas etre le bean
  * {@code ObjectMapper} de Spring Boot, dont la configuration appartient a l'application hote.

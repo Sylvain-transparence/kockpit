@@ -81,7 +81,7 @@ export const login = async() => {
             "clientPrincipal": {
                 "identityProvider": "aad",
                 "userId": "123456789",
-                "userDetails": "johndoe@mousquetaires.com",
+                "userDetails": "johndoe@example.com",
                 "userRoles": [
                     "support",
                     "anonymous",

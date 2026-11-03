@@ -67,11 +67,19 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
       - OPENSEARCH_ENDPOINTS=http://opensearch:9200
-      - kockpit.sdk.manifest.filesystem.path=/data/manifests
-      - kockpit.sdk.filesystem.local_directory=/data
+      # must match the audit stream's INDEX_SUFFIX
+      - INDEX_NAME=auditdata
+      - FS_MANIFESTS_PATH=/data/manifests
+      - FS_STORAGE_PATH=/data
     volumes:
-      - ~/IdeaProjects/kockpit/data:/data
+      - ${KOCKPIT_DATA_DIR:-../../data}:/data
+    depends_on:
+      kafka:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
 
   kockpit-console:
     image: ghcr.io/mahieddine-ichir/kockpit/kockpit-console:latest
@@ -79,7 +87,8 @@ services:
     ports:
       - "3000:80"
     environment:
-      - KOCKPIT_BACKEND=http://kockpit-backend-application:8080/backend
+      # nginx proxies /api to ${KOCKPIT_BACKEND}/api
+      - KOCKPIT_BACKEND=http://kockpit-backend-application:8080
     depends_on:
       - kockpit-backend-application
 
@@ -87,11 +96,11 @@ services:
     image: ghcr.io/mahieddine-ichir/kockpit/kockpit-audit-stream-application-kafka:latest
     container_name: kockpit-audit-stream-application
     ports:
-      - "9080:9080"
+      - "8081:8081"
     environment:
       - BOOTSTRAP_SERVERS=kafka:9092
       - OPENSEARCH_ENDPOINTS=http://opensearch:9200
-      - spring.profiles.include=kafka
+      - INDEX_SUFFIX=auditdata
       - kockpit.audit.stream.kafka.topics=audits
     depends_on:
       kafka:
@@ -103,18 +112,13 @@ services:
     image: ghcr.io/mahieddine-ichir/kockpit/kockpit-sample-all-filesystem:latest
     container_name: kockpit-sample-all
     ports:
-      - "8081:8081"
+      - "8082:8082"
     environment:
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - KOCKPIT_SDK_DOMAIN=kockpit
-      - KOCKPIT_SDK_ENV=local
-      - KOCKPIT_SDK_APPID=sample-app
-      - kockpit.sdk.service.audit.notification.topic=audits
-      - kockpit.sdk.filesystem.local_directory=/data
+      # read by spring.kafka.producer.bootstrap-servers in the sample's application.yml
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - FS_STORAGE_PATH=/data
     volumes:
-      - ~/IdeaProjects/kockpit/data:/data
-    links:
-      - kafka:kafka
+      - ${KOCKPIT_DATA_DIR:-../../data}:/data
     depends_on:
       kafka:
         condition: service_healthy

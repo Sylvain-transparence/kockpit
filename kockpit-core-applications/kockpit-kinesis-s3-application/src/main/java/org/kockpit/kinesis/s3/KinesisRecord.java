@@ -15,7 +15,7 @@ public class KinesisRecord {
     private String serviceId;
     private Object message;
     private Map<String, Object> propertyValues;
-    // legacy kockpit-accor heartbeat fields
+    // legacy heartbeat fields
     private String applicationInstance;
     private Boolean ended;
 }

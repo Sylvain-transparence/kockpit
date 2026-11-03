@@ -17,50 +17,50 @@ class ManifestReaderTest {
     void should_parse_current_format_manifest_as_is() {
         String json = """
                 {
-                  "domain": "wcbno",
+                  "domain": "orders",
                   "env": "dev",
                   "policies": [
                     { "groups": ["team"], "permissions": ["*"], "resources": ["audit:*"] }
                   ],
                   "services": [
-                    { "type": "audit", "name": "wcbno-order-api-v1", "id": "wcbno-order-api-v1", "config": { "label": "Order - API v1" } }
+                    { "type": "audit", "name": "orders-api-v1", "id": "orders-api-v1", "config": { "label": "Order - API v1" } }
                   ]
                 }
                 """;
 
         ManifestDto manifest = ManifestReader.read(json.getBytes(StandardCharsets.UTF_8));
 
-        assertThat(manifest.getDomain()).isEqualTo("wcbno");
+        assertThat(manifest.getDomain()).isEqualTo("orders");
         assertThat(manifest.getEnv()).isEqualTo("dev");
         assertThat(manifest.getPolicies()).hasSize(1);
         assertThat(manifest.getServices()).hasSize(1);
 
         ServiceDto service = manifest.getServices().getFirst();
         assertThat(service.getType()).isEqualTo("audit");
-        assertThat(service.getName()).isEqualTo("wcbno-order-api-v1");
-        assertThat(service.getId()).isEqualTo("wcbno-order-api-v1");
+        assertThat(service.getName()).isEqualTo("orders-api-v1");
+        assertThat(service.getId()).isEqualTo("orders-api-v1");
     }
 
     @Test
     void should_convert_legacy_applications_audit_services_to_service_dtos() {
         String json = """
                 {
-                  "domain": "wcbno",
+                  "domain": "orders",
                   "env": "dev",
                   "policies": [
                     { "groups": ["team"], "permissions": [], "resources": ["audit:*"] }
                   ],
                   "applications": [
                     {
-                      "id": "wcbno-order",
-                      "label": "WCBNO Order",
+                      "id": "orders-service",
+                      "label": "ORDERS Order",
                       "subDomain": "Domain",
                       "services": {
                         "audit": [
                           {
-                            "name": "wcbno-order-api-v1",
+                            "name": "orders-api-v1",
                             "label": "Order - API v1",
-                            "appIds": ["wcbno-order"],
+                            "appIds": ["orders-service"],
                             "resultColumns": [
                               { "renderer": "date", "name": "start", "label": "Start date" },
                               { "renderer": "substring", "name": "traceId", "label": "Trace ID" },
@@ -83,15 +83,15 @@ class ManifestReaderTest {
 
         ManifestDto manifest = ManifestReader.read(json.getBytes(StandardCharsets.UTF_8));
 
-        assertThat(manifest.getDomain()).isEqualTo("wcbno");
+        assertThat(manifest.getDomain()).isEqualTo("orders");
         assertThat(manifest.getEnv()).isEqualTo("dev");
         assertThat(manifest.getPolicies()).hasSize(1);
         assertThat(manifest.getServices()).hasSize(1);
 
         ServiceDto service = manifest.getServices().getFirst();
         assertThat(service.getType()).isEqualTo("audit");
-        assertThat(service.getName()).isEqualTo("wcbno-order-api-v1");
-        assertThat(service.getId()).isEqualTo("wcbno-order-api-v1");
+        assertThat(service.getName()).isEqualTo("orders-api-v1");
+        assertThat(service.getId()).isEqualTo("orders-api-v1");
 
         assertThat(service.getConfig()).isInstanceOf(Map.class);
         @SuppressWarnings("unchecked")
@@ -109,17 +109,17 @@ class ManifestReaderTest {
                 Map.of("name", "httpMethod", "type", "text", "path", "indexedKeyValues.httpMethod"),
                 Map.of("name", "httpStatus", "type", "number", "path", "indexedKeyValues.httpStatus")
         );
-        assertThat(config.get("app_ids")).isEqualTo(List.of("wcbno-order"));
+        assertThat(config.get("app_ids")).isEqualTo(List.of("orders-service"));
     }
 
     @Test
     void should_not_set_app_ids_when_the_legacy_audit_service_declares_none() {
         String json = """
                 {
-                  "domain": "wcbno", "env": "dev",
+                  "domain": "orders", "env": "dev",
                   "applications": [
-                    { "id": "wcbno-order",
-                      "services": { "audit": [ { "name": "wcbno-order-api-v1", "appIds": [] } ] } }
+                    { "id": "orders-service",
+                      "services": { "audit": [ { "name": "orders-api-v1", "appIds": [] } ] } }
                   ]
                 }
                 """;
@@ -135,7 +135,7 @@ class ManifestReaderTest {
     void should_convert_every_application_and_every_audit_entry() {
         String json = """
                 {
-                  "domain": "wcbno",
+                  "domain": "orders",
                   "env": "dev",
                   "applications": [
                     { "id": "app-1", "services": { "audit": [ { "name": "audit-1" }, { "name": "audit-2" } ] } },
@@ -155,11 +155,11 @@ class ManifestReaderTest {
     void should_ignore_legacy_service_types_other_than_audit() {
         String json = """
                 {
-                  "domain": "wcbno",
+                  "domain": "orders",
                   "env": "dev",
                   "applications": [
                     {
-                      "id": "wcbno-order",
+                      "id": "orders-service",
                       "services": {
                         "cache": [ { "name": "someCache" } ],
                         "dynaconfig": [ { "label": "Order - API v1" } ]
@@ -178,13 +178,13 @@ class ManifestReaderTest {
     void should_ignore_applications_key_when_services_are_already_present() {
         String json = """
                 {
-                  "domain": "wcbno",
+                  "domain": "orders",
                   "env": "dev",
                   "services": [
                     { "type": "audit", "name": "current-format-service", "id": "current-format-service" }
                   ],
                   "applications": [
-                    { "id": "wcbno-order", "services": { "audit": [ { "name": "legacy-should-be-ignored" } ] } }
+                    { "id": "orders-service", "services": { "audit": [ { "name": "legacy-should-be-ignored" } ] } }
                   ]
                 }
                 """;
@@ -200,10 +200,10 @@ class ManifestReaderTest {
     void should_read_the_same_manifest_from_an_input_stream_as_from_bytes() {
         String json = """
                 {
-                  "domain": "wcbno",
+                  "domain": "orders",
                   "env": "dev",
                   "applications": [
-                    { "id": "wcbno-order", "services": { "audit": [ { "name": "wcbno-order-api-v1" } ] } }
+                    { "id": "orders-service", "services": { "audit": [ { "name": "orders-api-v1" } ] } }
                   ]
                 }
                 """;

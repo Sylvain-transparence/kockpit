@@ -4,7 +4,7 @@ import lombok.experimental.UtilityClass;
 
 /**
  * Will be refactored / review / (maybe) removed during next refactoring. This class has been
- * duplicated from wcp-rest-api (to remove the maven dependency).
+ * duplicated from the legacy rest-api library (to remove the maven dependency).
  */
 @UtilityClass
 @Deprecated(since = "2.4.1", forRemoval = true)

@@ -29,24 +29,24 @@ class ManifestAccessApiTest {
 
     private static final List<ManifestDto> MANIFESTS = List.of(
             manifest("""
-                    { "domain": "wcxss", "env": "dev", "name": "wcxss-dev",
-                      "groups": ["ACCOR-WCPConsole-WCXSSTeam"], "policies": null,
+                    { "domain": "insurance", "env": "dev", "name": "insurance-dev",
+                      "groups": ["KOCKPIT-Console-InsuranceTeam"], "policies": null,
                       "services": [ { "type": "audit", "name": "a", "id": "a" } ] }"""),
             manifest("""
-                    { "domain": "wcoff", "env": "review-mr-1551", "name": "wcoff-review",
+                    { "domain": "offers", "env": "review-mr-1551", "name": "offers-review",
                       "groups": null,
                       "policies": [
-                        {"groups":["ACCOR-WCPConsole-QaNGATeam"],"permissions":[],"resources":["audit:*"]},
-                        {"groups":["ACCOR-WCPConsole-WCOFFTeam"],"permissions":[],"resources":["audit:*","cache:*","dynaconfig:*","featureflipping:*","sqsdlq:*"]}
+                        {"groups":["KOCKPIT-Console-QaTeam"],"permissions":[],"resources":["audit:*"]},
+                        {"groups":["KOCKPIT-Console-OffersTeam"],"permissions":[],"resources":["audit:*","cache:*","dynaconfig:*","featureflipping:*","sqsdlq:*"]}
                       ],
                       "services": [ { "type": "audit", "name": "offers-api", "id": "offers-api" } ] }"""),
             manifest("""
-                    { "domain": "wcc", "env": "dev", "name": "wcc-dev",
+                    { "domain": "messaging", "env": "dev", "name": "messaging-dev",
                       "services": [ { "type": "audit", "name": "c", "id": "c" } ] }"""),
-            // Second manifest for wcoff/review-mr-1551, restricted to its own team.
+            // Second manifest for offers/review-mr-1551, restricted to its own team.
             manifest("""
-                    { "domain": "wcoff", "env": "review-mr-1551", "name": "wcoff-review-business",
-                      "groups": ["ACCOR-WCPConsole-WCOFFBusinessTeam"],
+                    { "domain": "offers", "env": "review-mr-1551", "name": "offers-review-business",
+                      "groups": ["KOCKPIT-Console-OffersBusinessTeam"],
                       "services": [ { "type": "audit", "name": "offers-business-api", "id": "offers-business-api" } ] }"""));
 
     @AfterEach
@@ -58,35 +58,35 @@ class ManifestAccessApiTest {
     void manifests_only_lists_what_the_user_can_see() throws Exception {
         MockMvc mvc = mvc(true);
 
-        loginWith("ACCOR-WCPConsole-WCOFFTeam");
+        loginWith("KOCKPIT-Console-OffersTeam");
         mvc.perform(asUser(get("/manifests")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].domain").value("wcoff"))
-                .andExpect(jsonPath("$[1].domain").value("wcc"));
+                .andExpect(jsonPath("$[0].domain").value("offers"))
+                .andExpect(jsonPath("$[1].domain").value("messaging"));
 
-        loginWith("ACCOR-WCPConsole-WBNO-ReadOnly");
+        loginWith("KOCKPIT-Console-ReadOnly");
         mvc.perform(asUser(get("/manifests")))
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].domain").value("wcc"));
+                .andExpect(jsonPath("$[0].domain").value("messaging"));
     }
 
     @Test
     void aggregated_merges_per_domain_env_after_per_manifest_access_filtering() throws Exception {
         MockMvc mvc = mvc(true);
 
-        // Member of both wcoff manifests' audiences: one wcoff entry with both services.
-        loginWith("ACCOR-WCPConsole-WCOFFTeam", "ACCOR-WCPConsole-WCOFFBusinessTeam");
+        // Member of both offers manifests' audiences: one offers entry with both services.
+        loginWith("KOCKPIT-Console-OffersTeam", "KOCKPIT-Console-OffersBusinessTeam");
         mvc.perform(asUser(get("/manifests/aggregated")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].domain").value("wcoff"))
+                .andExpect(jsonPath("$[0].domain").value("offers"))
                 .andExpect(jsonPath("$[0].services.length()").value(2))
-                .andExpect(jsonPath("$[0].name").value("wcoff-review, wcoff-review-business"))
-                .andExpect(jsonPath("$[1].domain").value("wcc"));
+                .andExpect(jsonPath("$[0].name").value("offers-review, offers-review-business"))
+                .andExpect(jsonPath("$[1].domain").value("messaging"));
 
         // Only the first manifest's policy matches: its service only, not the restricted one's.
-        loginWith("ACCOR-WCPConsole-WCOFFTeam");
+        loginWith("KOCKPIT-Console-OffersTeam");
         mvc.perform(asUser(get("/manifests/aggregated")))
                 .andExpect(jsonPath("$[0].services.length()").value(1))
                 .andExpect(jsonPath("$[0].services[0].id").value("offers-api"));
@@ -96,30 +96,30 @@ class ManifestAccessApiTest {
     void domain_env_endpoints_are_forbidden_without_access() throws Exception {
         MockMvc mvc = mvc(true);
 
-        loginWith("ACCOR-WCPConsole-WBNO-ReadOnly");
-        mvc.perform(get("/wcxss/dev/audits/_search")).andExpect(status().isForbidden());
-        mvc.perform(get("/wcxss/dev/heartbeat")).andExpect(status().isForbidden());
-        mvc.perform(get("/wcc/dev/audits/_search")).andExpect(status().isOk());
+        loginWith("KOCKPIT-Console-ReadOnly");
+        mvc.perform(get("/insurance/dev/audits/_search")).andExpect(status().isForbidden());
+        mvc.perform(get("/insurance/dev/heartbeat")).andExpect(status().isForbidden());
+        mvc.perform(get("/messaging/dev/audits/_search")).andExpect(status().isOk());
         mvc.perform(get("/unknown/dev/audits/_search")).andExpect(status().isForbidden());
 
-        loginWith("ACCOR-WCPConsole-WCXSSTeam");
-        mvc.perform(get("/wcxss/dev/audits/_search")).andExpect(status().isOk());
-        mvc.perform(get("/wcxss/dev/dashboard/app_details")).andExpect(status().isOk());
-        mvc.perform(get("/wcxss/dev/cache/anything")).andExpect(status().isOk());
+        loginWith("KOCKPIT-Console-InsuranceTeam");
+        mvc.perform(get("/insurance/dev/audits/_search")).andExpect(status().isOk());
+        mvc.perform(get("/insurance/dev/dashboard/app_details")).andExpect(status().isOk());
+        mvc.perform(get("/insurance/dev/cache/anything")).andExpect(status().isOk());
     }
 
     @Test
     void policies_scope_access_by_service_type() throws Exception {
         MockMvc mvc = mvc(true);
 
-        loginWith("ACCOR-WCPConsole-QaNGATeam");
-        mvc.perform(get("/wcoff/review-mr-1551/audits/_search")).andExpect(status().isOk());
-        mvc.perform(get("/wcoff/review-mr-1551/cache/currenciesCache")).andExpect(status().isForbidden());
-        mvc.perform(get("/wcoff/review-mr-1551/heartbeat")).andExpect(status().isOk());
+        loginWith("KOCKPIT-Console-QaTeam");
+        mvc.perform(get("/offers/review-mr-1551/audits/_search")).andExpect(status().isOk());
+        mvc.perform(get("/offers/review-mr-1551/cache/currenciesCache")).andExpect(status().isForbidden());
+        mvc.perform(get("/offers/review-mr-1551/heartbeat")).andExpect(status().isOk());
 
-        loginWith("ACCOR-WCPConsole-WCOFFTeam");
-        mvc.perform(get("/wcoff/review-mr-1551/cache/currenciesCache")).andExpect(status().isOk());
-        mvc.perform(get("/wcoff/review-mr-1551/dyna-config/offers-api")).andExpect(status().isOk());
+        loginWith("KOCKPIT-Console-OffersTeam");
+        mvc.perform(get("/offers/review-mr-1551/cache/currenciesCache")).andExpect(status().isOk());
+        mvc.perform(get("/offers/review-mr-1551/dyna-config/offers-api")).andExpect(status().isOk());
     }
 
     @Test
@@ -127,7 +127,7 @@ class ManifestAccessApiTest {
         MockMvc mvc = mvc(false);
 
         mvc.perform(get("/manifests")).andExpect(jsonPath("$.length()").value(4));
-        mvc.perform(get("/wcxss/dev/audits/_search")).andExpect(status().isOk());
+        mvc.perform(get("/insurance/dev/audits/_search")).andExpect(status().isOk());
     }
 
     private static MockMvc mvc(boolean cognitoConfigured) {

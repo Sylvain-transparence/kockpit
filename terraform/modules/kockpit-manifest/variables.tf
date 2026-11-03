@@ -1,5 +1,5 @@
 variable "domain" {
-  description = "Domain identifier (e.g. wcplatform)"
+  description = "Domain identifier (e.g. platform)"
   type        = string
 }
 

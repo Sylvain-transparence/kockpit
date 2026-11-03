@@ -12,7 +12,7 @@ Counts, for every index of the domain, how many documents match
 Writes <domain>_<cutoff>_snapshot.txt and <domain>_<cutoff>_delete.txt next to this script and
 prints the exact commands for the next steps.
 
-  ./00_plan.py --host https://localhost:9200 --insecure --domain wcoff --before "2026-10-15 00:00"
+  ./00_plan.py --host https://localhost:9200 --insecure --domain offers --before "2026-10-15 00:00"
 """
 import argparse
 import json
@@ -33,11 +33,11 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--host", default="https://localhost:9200")
     p.add_argument("--insecure", action="store_true", help="Skip TLS verification (tunnel)")
-    p.add_argument("--domain", required=True, help="Audit domain, e.g. wcbno")
+    p.add_argument("--domain", required=True, help="Audit domain, e.g. orders")
     p.add_argument("--before", required=True,
                    help='Cutoff, exclusive. Paris time unless an offset is given, e.g. "2026-09-30 12:15"')
     p.add_argument("--index-pattern", help="Default: <domain>-auditdata-*")
-    p.add_argument("--repository", default="wcbno-archive",
+    p.add_argument("--repository", default="orders-archive",
                    help="Snapshot repository registered in step 2 (one repository can hold every snapshot)")
     args = p.parse_args()
 
