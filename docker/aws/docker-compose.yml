@@ -12,6 +12,7 @@ services:
       - "127.0.0.1:4510-4559:4510-4559"  # external services port range
     volumes:
       - ./init:/etc/localstack/init/ready.d/
+      - ../manifests:/manifests:ro
       - "/var/run/docker.sock:/var/run/docker.sock"
     environment:
       - AWS_DEFAULT_REGION=eu-west-1

@@ -1,0 +1,92 @@
+# Full local stack for Azure: the infrastructure of docker-compose.yml (Kafka, OpenSearch, OpenSearch Dashboards,
+# Azurite) plus the Kockpit applications, pulled from the GitHub Container Registry with their `latest` tag
+# (built from the default branch).
+#
+#   cd docker/azure
+#   docker compose -f docker-compose-full.yml up -d
+#
+# Storage defaults to Azurite; copy .env.azure to .env to use a real storage account.
+include:
+  - docker-compose.yml
+
+services:
+  kockpit-backend-application:
+    image: ghcr.io/mahieddine-ichir/kockpit/kockpit-backend-application-azure:latest
+    pull_policy: always
+    container_name: kockpit-backend-application
+    ports:
+      - "8080:8080"
+    environment:
+      # storage defaults to Azurite; set these in .env to use a real storage account
+      - KOCKPIT_COMMUNICATION_AZURE_STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://azurite:10000/devstoreaccount1}
+      - STORAGE_ACCOUNT=${STORAGE_ACCOUNT:-devstoreaccount1}
+      - STORAGE_KEY=${STORAGE_KEY:-Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==}
+      - STORAGE_CONTAINER=${STORAGE_CONTAINER:-data}
+      - KOCKPIT_BACKEND_MANIFESTS_AZURE_STORAGE_ENDPOINT=${MANIFESTS_STORAGE_ENDPOINT:-http://azurite:10000/devstoreaccount1}
+      - MANIFESTS_STORAGE_ACCOUNT=${MANIFESTS_STORAGE_ACCOUNT:-devstoreaccount1}
+      - MANIFESTS_STORAGE_KEY=${MANIFESTS_STORAGE_KEY:-Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==}
+      - MANIFESTS_STORAGE_CONTAINER=${MANIFESTS_STORAGE_CONTAINER:-manifests}
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - OPENSEARCH_ENDPOINTS=http://opensearch:9200
+      - spring.profiles.include=azure
+      # must match the audit stream's INDEX_SUFFIX
+      - INDEX_NAME=audit-data
+    depends_on:
+      kafka:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+      azurite-init:
+        condition: service_completed_successfully
+
+  kockpit-console:
+    image: ghcr.io/mahieddine-ichir/kockpit/kockpit-console:latest
+    pull_policy: always
+    container_name: kockpit-console
+    ports:
+      - "3000:80"
+    environment:
+      # nginx proxies /api to ${KOCKPIT_BACKEND}/api
+      - KOCKPIT_BACKEND=http://kockpit-backend-application:8080
+    depends_on:
+      - kockpit-backend-application
+
+  kockpit-audit-stream-application:
+    image: ghcr.io/mahieddine-ichir/kockpit/kockpit-audit-stream-application-kafka:latest
+    pull_policy: always
+    container_name: kockpit-audit-stream-application
+    ports:
+      - "8081:8081"
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - OPENSEARCH_ENDPOINTS=http://opensearch:9200
+      - INDEX_SUFFIX=audit-data
+      - KOCKPIT_AUDIT_STREAM_KAFKA_TOPICS=audits
+      - KOCKPIT_AUDIT_NOTIFICATION_KAFKA_TOPIC=audits
+      #- SPRING_PROFILES_INCLUDE=eventhub -> on azure
+    depends_on:
+      kafka:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+
+  kockpit-sample-all:
+    image: ghcr.io/mahieddine-ichir/kockpit/kockpit-sample-all-azure:latest
+    pull_policy: always
+    container_name: kockpit-sample-all
+    ports:
+      - "8082:8082"
+    environment:
+      # read by spring.kafka.producer.bootstrap-servers in the sample's application.yml
+      - BOOTSTRAP_SERVERS=kafka:9092
+      # storage defaults to Azurite; set these in .env to use a real storage account
+      - KOCKPIT_COMMUNICATION_AZURE_STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://azurite:10000/devstoreaccount1}
+      - STORAGE_ACCOUNT=${STORAGE_ACCOUNT:-devstoreaccount1}
+      - STORAGE_KEY=${STORAGE_KEY:-Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==}
+      - STORAGE_CONTAINER=${STORAGE_CONTAINER:-data}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      azurite-init:
+        condition: service_completed_successfully
+

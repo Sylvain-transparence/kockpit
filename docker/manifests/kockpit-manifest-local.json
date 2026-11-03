@@ -29,6 +29,7 @@
             "options": [
               "any-app",
               "sample-app",
+              "kockpit-samples-all",
               "kockpit-backend-application",
               "kockpit-audit-stream"
             ]
@@ -42,12 +43,12 @@
         ],
         "saved_filters": [
           {
-            "name": "samples-api, Create en erreur",
+            "name": "kockpit-samples-all, Create en erreur",
             "filters": [
               {
-                "path": "appId",
+                "name": "appId",
                 "values": [
-                  "rcu-api"
+                  "kockpit-samples-all"
                 ]
               },
               {
@@ -71,12 +72,12 @@
             ]
           },
           {
-            "name": "rcu-api, OK",
+            "name": "kockpit-samples-all, OK",
             "filters": [
               {
                 "name": "appId",
                 "values": [
-                  "rcu-api"
+                  "kockpit-samples-all"
                 ]
               },
               {
