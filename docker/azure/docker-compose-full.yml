@@ -79,6 +79,8 @@ services:
     environment:
       # read by spring.kafka.producer.bootstrap-servers in the sample's application.yml
       - BOOTSTRAP_SERVERS=kafka:9092
+      # send buffered audits every 5s (application.yml sets 60s)
+      - kockpit.audit.notification.async-delay-ms=5000
       # storage defaults to Azurite; set these in .env to use a real storage account
       - KOCKPIT_COMMUNICATION_AZURE_STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://azurite:10000/devstoreaccount1}
       - STORAGE_ACCOUNT=${STORAGE_ACCOUNT:-devstoreaccount1}

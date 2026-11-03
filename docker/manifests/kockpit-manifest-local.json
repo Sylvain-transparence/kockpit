@@ -20,7 +20,7 @@
           {
             "name": "httpStatus",
             "type": "options",
-            "options": [200, 201, 400, 404, 401, 500],
+            "options": [200, 201, 204, 400, 404, 401, 500],
             "path": "indexedKeyValues.httpStatus"
           },
           {
@@ -43,7 +43,7 @@
         ],
         "saved_filters": [
           {
-            "name": "kockpit-samples-all, Create en erreur",
+            "name": "kockpit-samples-all, en erreur",
             "filters": [
               {
                 "name": "appId",
@@ -55,8 +55,10 @@
                 "name": "method",
                 "path": "indexedKeyValues.httpMethod",
                 "values": [
+                  "GET",
                   "POST",
-                  "PUT"
+                  "PUT",
+                  "DELETE"
                 ]
               },
               {
@@ -84,7 +86,10 @@
                 "name": "method",
                 "path": "indexedKeyValues.httpMethod",
                 "values": [
-                  "POST"
+                  "GET",
+                  "PUT",
+                  "POST",
+                  "DELETE"
                 ]
               },
               {
@@ -92,7 +97,8 @@
                 "path": "indexedKeyValues.httpStatus",
                 "values": [
                   200,
-                  201
+                  201,
+                  204
                 ]
               }
             ]
