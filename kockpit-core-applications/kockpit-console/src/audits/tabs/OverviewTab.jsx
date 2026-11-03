@@ -117,7 +117,7 @@ const describeContents = (request) => {
     if (keyValues > 0) {
         entries.push({ key: 'kv', tab: 'keyvalue', icon: <Tag className="w-4 h-4" />, title: 'Key & Value', detail: count(keyValues, 'indexed value') });
     }
-    // anything else (e.g. builtin.darkcanary) has no tab of its own: named, with the Json tab to read it
+    // anything else (e.g. a custom audit type) has no tab of its own: named, with the Json tab to read it
     types.filter(type => !['builtin.web', 'builtin.httpexchanges', 'kengine.flows'].includes(type))
         .filter((type, index, all) => all.indexOf(type) === index)
         .forEach(type => entries.push({ key: type, tab: 'json', icon: <Box className="w-4 h-4" />, title: type, detail: 'in the Json tab', mono: true }));
