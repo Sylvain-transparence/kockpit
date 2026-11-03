@@ -81,15 +81,15 @@
   .brand .logo-text{display:flex; flex-direction:column; line-height:1;}
   .brand .logo-title{font-family:var(--font-hero); font-weight:800; font-size:19px; letter-spacing:0.14em; text-transform:uppercase; color:#fff;}
   .brand .logo-sub{font-family:var(--font-mono); font-size:8.5px; font-weight:500; letter-spacing:0.34em; color:var(--cyan); margin-top:4px; text-transform:uppercase;}
-  .navlinks{display:flex; align-items:center; gap:28px;}
+  .navlinks{display:flex; align-items:center; gap:22px;}
   .navlinks a{
     font-size:13px; color:var(--text-dim); font-family:var(--font-mono);
-    letter-spacing:0.03em; transition:color 0.15s;
+    letter-spacing:0.03em; transition:color 0.15s; white-space:nowrap;
   }
   .navlinks a:hover{color:var(--text);}
   .nav-cta{
     border:1px solid var(--line); padding:8px 16px; border-radius:var(--radius);
-    color:var(--text) !important; font-size:13px; display:flex; align-items:center; gap:8px;
+    color:var(--text) !important; font-size:13px; display:flex; align-items:center; gap:8px; white-space:nowrap;
     transition:border-color 0.15s, background 0.15s;
   }
   .nav-cta:hover{border-color:var(--amber); background:rgba(255,159,69,0.06);}
@@ -279,6 +279,45 @@
     margin-left:8px;
   }
   .screen img{display:block; width:100%; height:auto;}
+  /* ---------- inside an audit ---------- */
+  .audit-tabs{display:flex; gap:2px; border-bottom:1px solid var(--line); flex-wrap:wrap;}
+  .audit-tab{
+    font-family:var(--font-mono); font-size:12.5px; color:var(--text-dim);
+    padding:12px 16px; cursor:pointer; border:none; border-bottom:2px solid transparent; background:none;
+    display:flex; align-items:center; gap:8px; transition:color 0.15s, border-color 0.15s;
+  }
+  .audit-tab:hover{color:var(--text);}
+  /* selected: underline + bold weight, not color alone */
+  .audit-tab[aria-selected="true"]{color:var(--text); font-weight:600; border-bottom-color:var(--amber);}
+  .audit-tab .anum{
+    font-size:10.5px; color:var(--text-faint); border:1px solid var(--line); border-radius:4px; padding:0 5px;
+  }
+  .audit-tab[aria-selected="true"] .anum{color:var(--amber); border-color:var(--amber-dim);}
+  .audit-panel{display:none;}
+  .audit-panel.active{display:block;}
+  .audit-panel .screen{margin-top:24px;}
+  .screen img[hidden]{display:none;}
+  /* description on the left, feature list on the right, under the full-width screenshot */
+  .audit-side{margin-top:22px; display:grid; grid-template-columns:minmax(0, 2fr) minmax(0, 3fr); gap:8px 40px; align-items:start;}
+  .audit-side .aintro{grid-column:1;}
+  .audit-side ul{grid-column:2; grid-row:1 / span 3; margin-top:0 !important;}
+  .audit-side h3{font-family:var(--font-display); font-weight:600; font-size:18px; margin-bottom:8px;}
+  .audit-side p{font-size:13.5px; color:var(--text-dim); line-height:1.6;}
+  .audit-side ul{list-style:none; margin-top:14px; display:flex; flex-direction:column; gap:10px;}
+  .audit-side li{font-size:13px; color:var(--text-dim); line-height:1.55; padding-left:18px; position:relative;}
+  .audit-side li::before{content:'✓'; position:absolute; left:0; color:var(--green); font-family:var(--font-mono);}
+  .audit-side li b{color:var(--text); font-weight:500;}
+  .audit-views{display:flex; gap:6px; margin-top:16px;}
+  .audit-view{
+    font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim); cursor:pointer;
+    border:1px solid var(--line); border-radius:4px; padding:4px 10px; background:none;
+  }
+  .audit-view[aria-pressed="true"]{color:var(--text); border-color:var(--amber); box-shadow:inset 0 0 0 1px var(--amber);}
+  .audit-view[aria-pressed="true"]::before{content:'● ';}
+  @media (max-width: 860px){
+    .audit-side{grid-template-columns:1fr;}
+    .audit-side ul{grid-column:1; grid-row:auto; margin-top:14px !important;}
+  }
   .console-caption{
     margin-top:14px; font-size:13.5px; color:var(--text-dim); max-width:640px;
   }
@@ -442,6 +481,7 @@
       <a href="#what">What it is</a>
       <a href="#capabilities">Capabilities</a>
       <a href="#console">Console</a>
+      <a href="#audit">Audits</a>
       <a href="#architecture">Architecture</a>
       <a href="#quickstart">Quick start</a>
       <a href="#resources">Resources</a>
@@ -638,6 +678,149 @@
       </div>
       <p class="console-caption">Feature keys with on/off toggles and optional expiry dates, plus a history tab
       for tracking who changed what and when — flipped live, without a redeploy.</p>
+    </div>
+  </div>
+</section>
+
+<section id="audit" class="border-top">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker"><span class="led on"></span> Inside an audit</div>
+      <h2>Every call, opened up end to end.</h2>
+      <p>Open any audit from the list to see everything the service recorded about that one request: the inbound
+      exchange, every outgoing call it made, the business rules it ran, and the values indexed for search.
+      The screens below follow a single <code class="mono" style="color:var(--blue)">POST /api/orders</code> from the sample application.</p>
+    </div>
+
+    <div class="audit-tabs" role="tablist" aria-label="Audit detail views">
+      <button class="audit-tab" role="tab" aria-selected="true" aria-controls="audit-panel-details" id="audit-tab-details" data-atab="details"><span class="anum">1</span>Details</button>
+      <button class="audit-tab" role="tab" aria-selected="false" aria-controls="audit-panel-reqres" id="audit-tab-reqres" data-atab="reqres"><span class="anum">2</span>Request &amp; Response</button>
+      <button class="audit-tab" role="tab" aria-selected="false" aria-controls="audit-panel-http" id="audit-tab-http" data-atab="http"><span class="anum">3</span>HTTP Exchange</button>
+      <button class="audit-tab" role="tab" aria-selected="false" aria-controls="audit-panel-rules" id="audit-tab-rules" data-atab="rules"><span class="anum">4</span>Rules</button>
+      <button class="audit-tab" role="tab" aria-selected="false" aria-controls="audit-panel-kv" id="audit-tab-kv" data-atab="kv"><span class="anum">5</span>Key &amp; Value</button>
+      <button class="audit-tab" role="tab" aria-selected="false" aria-controls="audit-panel-json" id="audit-tab-json" data-atab="json"><span class="anum">6</span>Json</button>
+    </div>
+
+    <div class="audit-panel active" role="tabpanel" id="audit-panel-details" aria-labelledby="audit-tab-details" data-apanel="details">
+      <div class="screen">
+        <div class="screen-bar"><span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
+          <span class="screen-path">kockpit / local — Audits / Details</span></div>
+        <img src="screenshots/audit-details.webp" alt="Audit Details tab for a POST /sample-app/api/orders request: a summary bar with method, path, 201 Created status, 412 ms duration and user, cards for the Request &amp; Response, 4 outgoing HTTP calls, 2 rule flows with 1 rule in error and 11 indexed values, then identifiers, timing with retention, application and environment" loading="lazy">
+      </div>
+      <div class="audit-side">
+        <div class="aintro">
+        <h3>Details</h3>
+        <p>The one-screen summary of the request, and the way into every other view.</p>
+        </div>
+        <ul>
+          <li><b>Request at a glance</b>: method, path, status, duration and the calling user.</li>
+          <li><b>In this audit</b>: what was recorded, with counts, and rules or calls <b>in error flagged</b> before you open them.</li>
+          <li><b>Identifiers and timing</b>: audit and trace IDs to copy, start and end, and how long the audit is kept.</li>
+          <li><b>Where it ran</b>: application, version, artifact, domain, environment and host.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="audit-panel" role="tabpanel" id="audit-panel-reqres" aria-labelledby="audit-tab-reqres" data-apanel="reqres">
+      <div class="screen">
+        <div class="screen-bar"><span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
+          <span class="screen-path">kockpit / local — Audits / Request &amp; Response</span></div>
+        <img src="screenshots/audit-request-response.webp" alt="Request &amp; Response tab: the inbound POST /sample-app/api/orders with its headers, the Authorization header hidden behind a show toggle, the JSON order body, and the 201 Created response with its headers and JSON payload" loading="lazy">
+      </div>
+      <div class="audit-side">
+        <div class="aintro">
+        <h3>Request &amp; Response</h3>
+        <p>The inbound exchange exactly as the service received and answered it.</p>
+        </div>
+        <ul>
+          <li><b>Side-by-side</b> request and response, with status, user and origin.</li>
+          <li><b>Headers</b> listed and counted, <b>sensitive ones hidden</b> until you choose to show them.</li>
+          <li><b>Bodies</b> pretty-printed and syntax-highlighted, with size, line wrapping and copy.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="audit-panel" role="tabpanel" id="audit-panel-http" aria-labelledby="audit-tab-http" data-apanel="http">
+      <div class="screen">
+        <div class="screen-bar"><span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
+          <span class="screen-path">kockpit / local — Audits / HTTP Exchange</span></div>
+        <img src="screenshots/audit-http-exchange.webp" alt="HTTP Exchange tab: 4 outgoing calls to catalog, customers, loyalty and payments services on a timeline, the loyalty call flagged as 404 Not Found, and the payment POST expanded with its request headers and body and its 201 Created response" loading="lazy">
+      </div>
+      <div class="audit-side">
+        <div class="aintro">
+        <h3>HTTP Exchange</h3>
+        <p>Every outgoing call the service made while handling the request.</p>
+        </div>
+        <ul>
+          <li><b>Waterfall timeline</b>: when each call started and how long it took, within the request.</li>
+          <li><b>Failures stand out</b>: failed calls are outlined, marked with an icon and counted in the header.</li>
+          <li><b>Expand any call</b> for its URL, query parameters, headers, body and response payload.</li>
+          <li><b>Filter</b> calls by method, URL or status.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="audit-panel" role="tabpanel" id="audit-panel-rules" aria-labelledby="audit-tab-rules" data-apanel="rules">
+      <div class="screen">
+        <div class="screen-bar"><span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
+          <span class="screen-path">kockpit / local — Audits / Rules</span></div>
+        <img class="audit-rules-img" data-view="map" src="screenshots/audit-rules-map.webp" alt="Rules tab, Map view: the OrderValidation and PricingAndPayment flows with their rules as blocks, the failing ApplyLoyaltyDiscount rule selected and shown with its steps, the failed LoadLoyaltyCard step, the error message and the execution trace" loading="lazy">
+        <img class="audit-rules-img" data-view="timeline" src="screenshots/audit-rules-timeline.webp" alt="Rules tab, Timeline view: flows, rules and their action steps on a shared timeline with VALID or INVALID status and duration, the ApplyLoyaltyDiscount rule and its LoadLoyaltyCard step outlined as INVALID" loading="lazy" hidden>
+      </div>
+      <div class="audit-side">
+        <div class="aintro">
+        <h3>Rules</h3>
+        <p>What the Kockpit rule engine decided for this request, flow by flow.</p>
+        <div class="audit-views" role="group" aria-label="Rules view">
+          <button class="audit-view" aria-pressed="true" data-view="map">Map</button>
+          <button class="audit-view" aria-pressed="false" data-view="timeline">Timeline</button>
+        </div>
+        </div>
+        <ul>
+          <li><b>Flows, rules and steps</b> (predicates and actions), each with its status and duration.</li>
+          <li><b>Map, Timeline and Flow views</b> of the same execution.</li>
+          <li><b>Failing rules highlighted</b>, with the failed step, the error message and its details.</li>
+          <li><b>Execution trace</b> of each rule, ready to copy.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="audit-panel" role="tabpanel" id="audit-panel-kv" aria-labelledby="audit-tab-kv" data-apanel="kv">
+      <div class="screen">
+        <div class="screen-bar"><span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
+          <span class="screen-path">kockpit / local — Audits / Key &amp; Value</span></div>
+        <img src="screenshots/audit-key-value.webp" alt="Key &amp; Value tab: 11 indexed keys such as requestUri, httpMethod, httpStatus, duration, principal, customerId and orderId, each with its TEXT or INT type and value" loading="lazy">
+      </div>
+      <div class="audit-side">
+        <div class="aintro">
+        <h3>Key &amp; Value</h3>
+        <p>The business values the service attached to the audit, indexed for search.</p>
+        </div>
+        <ul>
+          <li><b>Typed values</b> (text or integer), so ranges and exact matches both work.</li>
+          <li><b>Searchable from the audit list</b>: find every request for an order, a customer or a status.</li>
+          <li><b>Filter and copy</b> keys and values.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="audit-panel" role="tabpanel" id="audit-panel-json" aria-labelledby="audit-tab-json" data-apanel="json">
+      <div class="screen">
+        <div class="screen-bar"><span class="screen-dot"></span><span class="screen-dot"></span><span class="screen-dot"></span>
+          <span class="screen-path">kockpit / local — Audits / Json</span></div>
+        <img src="screenshots/audit-json.webp" alt="Json tab: the raw 15.3 KB audit document as a collapsible tree, with Tree and Text modes, a search box, and Expand, Collapse, Copy and Download actions" loading="lazy">
+      </div>
+      <div class="audit-side">
+        <div class="aintro">
+        <h3>Json</h3>
+        <p>The raw audit document, for anything the other views don't show.</p>
+        </div>
+        <ul>
+          <li><b>Tree or text</b>, with the document size.</li>
+          <li><b>Search</b> keys and values, <b>expand or collapse</b> everything.</li>
+          <li><b>Copy or download</b> the audit to share or attach to a ticket.</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -954,6 +1137,21 @@
       });
     });
     wrap.appendChild(btn);
+  });
+  // inside an audit: detail view tabs, and the Map / Timeline toggle of the Rules view
+  document.querySelectorAll('.audit-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var target = tab.getAttribute('data-atab');
+      document.querySelectorAll('.audit-tab').forEach(function(t){ t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
+      document.querySelectorAll('.audit-panel').forEach(function(p){ p.classList.toggle('active', p.getAttribute('data-apanel') === target); });
+    });
+  });
+  document.querySelectorAll('.audit-view').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var view = btn.getAttribute('data-view');
+      document.querySelectorAll('.audit-view').forEach(function(b){ b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+      document.querySelectorAll('.audit-rules-img').forEach(function(img){ img.hidden = img.getAttribute('data-view') !== view; });
+    });
   });
 </script>
 
