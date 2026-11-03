@@ -696,7 +696,7 @@
       <div class="kicker"><span class="led amber"></span> Quick start</div>
       <h2>Get a console running in minutes.</h2>
       <p>Each provider has a ready-made Docker Compose stack in the repository's <code class="mono" style="color:var(--blue)">docker/</code>
-      folder. Images come from <code class="mono" style="color:var(--blue)">ghcr.io/mahieddine-ichir/kockpit</code> with their <code class="mono" style="color:var(--blue)">latest</code> tag.</p>
+      folder, and a Helm chart deploys the same stack on Kubernetes. Images come from <code class="mono" style="color:var(--blue)">ghcr.io/mahieddine-ichir/kockpit</code> with their <code class="mono" style="color:var(--blue)">latest</code> tag.</p>
     </div>
 
     <p class="qs-prereq"><span><b>Prerequisites:</b> Docker with Compose <code>v2.20+</code> (the stacks use <code>include</code>),
@@ -723,11 +723,11 @@
         <span class="pdesc">LocalStack (S3, SQS, SNS, Kinesis, DynamoDB) and OpenSearch, for running the apps from your IDE.</span>
         <span class="pstate">Select</span>
       </button>
-      <button class="qs-provider" role="tab" id="qs-tab-kube" aria-selected="false" aria-disabled="true" data-provider="kube" title="Kubernetes quick start coming soon">
+      <button class="qs-provider" role="tab" id="qs-tab-kube" aria-controls="qs-panel-kube" aria-selected="false" data-provider="kube">
         <span class="pmono" aria-hidden="true">K8s</span>
         <span class="pname">Kubernetes</span>
-        <span class="pdesc">Deploy the Kockpit stack on a cluster.</span>
-        <span class="pstate">Coming soon</span>
+        <span class="pdesc">A Helm chart with Kafka, OpenSearch, the Kockpit apps and a sample app, for kind, minikube or Docker Desktop.</span>
+        <span class="pstate">Select</span>
       </button>
     </div>
 
@@ -871,6 +871,52 @@
         <div class="qs-endpoint"><div class="elabel">Dashboards</div><div class="evalue">http://localhost:5601</div></div>
       </div>
       <p class="qs-note"><b>Stop:</b> <code>docker compose down</code> from <code>docker/aws</code>.</p>
+    </div>
+
+    <!-- ===== Kubernetes ===== -->
+    <div class="qs-panel" role="tabpanel" id="qs-panel-kube" aria-labelledby="qs-tab-kube" data-panel="kube">
+      <h3>Kubernetes (Helm)</h3>
+      <p class="pintro">The <code>deployments/kubernetes/kockpit</code> chart deploys the Kafka stack on a single-node cluster:
+      Kafka, OpenSearch, the audit stream, the backend (filesystem storage), the console and the sample application.
+      It needs <code>kubectl</code>, Helm 3 or later and about 6&nbsp;GB of memory for the cluster.</p>
+      <div class="qs-steps">
+        <div class="qs-step">
+          <div class="qs-num">1</div>
+          <div><div class="stitle">Create a local cluster</div>
+            <div class="sdesc">With kind here; minikube or Docker Desktop's Kubernetes work too.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">kind</span> create cluster <span class="flag">--name</span> kockpit</code></pre></div>
+            </div></div>
+        </div>
+        <div class="qs-step">
+          <div class="qs-num">2</div>
+          <div><div class="stitle">Install the chart</div>
+            <div class="sdesc">The Java applications take a minute or two to become ready.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">helm install</span> kockpit deployments/kubernetes/kockpit <span class="flag">--namespace</span> kockpit <span class="flag">--create-namespace</span>
+<span class="cmd">kubectl</span> <span class="flag">-n</span> kockpit get pods <span class="flag">-w</span></code></pre></div>
+            </div></div>
+        </div>
+        <div class="qs-step">
+          <div class="qs-num">3</div>
+          <div><div class="stitle">Open the console and generate audits</div>
+            <div class="sdesc">Forward the console and the sample app, then call the sample app as in the Azure stack.
+              <div class="code-wrap"><pre class="code"><code><span class="cmd">kubectl</span> <span class="flag">-n</span> kockpit port-forward svc/kockpit-console 3000:80 &amp;
+<span class="cmd">kubectl</span> <span class="flag">-n</span> kockpit port-forward svc/kockpit-sample-app 8082:8082 &amp;
+<span class="cmd">curl</span> http://localhost:8082/sample-app/api/sayHello/kockpit</code></pre></div>
+            </div></div>
+        </div>
+      </div>
+      <div class="qs-endpoints">
+        <div class="qs-endpoint"><div class="elabel">Console (port-forward)</div><div class="evalue">http://localhost:3000</div></div>
+        <div class="qs-endpoint"><div class="elabel">Sample app (port-forward)</div><div class="evalue">http://localhost:8082/sample-app</div></div>
+        <div class="qs-endpoint"><div class="elabel">In-cluster backend</div><div class="evalue">kockpit-backend:8080</div></div>
+        <div class="qs-endpoint"><div class="elabel">In-cluster Kafka · OpenSearch</div><div class="evalue">kockpit-kafka:9092 · kockpit-opensearch:9200</div></div>
+      </div>
+      <p class="qs-note"><b>Values:</b> use your own Kafka or OpenSearch with <code>kafka.enabled=false</code> /
+      <code>opensearch.enabled=false</code>, enable Dashboards with <code>dashboards.enabled=true</code> or an ingress with
+      <code>ingress.enabled=true</code>. See the chart's <code>README.md</code> for all of them.<br>
+      <b>Manifests:</b> the chart's <code>files/manifests</code> are copied into the backend's storage on every start,
+      overwriting the stored copies.<br>
+      <b>Uninstall:</b> <code>helm uninstall kockpit -n kockpit</code>, then <code>kind delete cluster --name kockpit</code>.</p>
     </div>
   </div>
 </section>

@@ -1,0 +1,38 @@
+{{- if .Values.data.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kockpit.fullname" . }}-data
+  labels:
+    {{- include "kockpit.labels" (dict "root" . "name" "data") | nindent 4 }}
+  annotations:
+    # keep the stored manifests and audit payloads on helm uninstall
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - {{ .Values.data.persistence.accessMode }}
+  {{- with .Values.data.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.data.persistence.size }}
+---
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kockpit.fullname" . }}-manifests
+  labels:
+    {{- include "kockpit.labels" (dict "root" . "name" "manifests") | nindent 4 }}
+data:
+  {{- if .Values.manifests.fromFiles }}
+  {{- range $path, $_ := .Files.Glob "files/manifests/*.json" }}
+  {{ base $path }}: |-
+    {{- $.Files.Get $path | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- range $name, $content := .Values.manifests.extra }}
+  {{ $name }}: |-
+    {{- $content | nindent 4 }}
+  {{- end }}

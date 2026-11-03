@@ -1,0 +1,87 @@
+{{- if .Values.console.enabled }}
+{{- $c := dict "root" . "name" "console" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  selector:
+    {{- include "kockpit.selectorLabels" $c | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.console.service.port }}
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kockpit.selectorLabels" $c | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kockpit.selectorLabels" $c | nindent 8 }}
+    spec:
+      {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: console
+          image: {{ include "kockpit.image" (dict "root" . "image" .Values.console.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            # nginx proxies /api to ${KOCKPIT_BACKEND}/api
+            - name: KOCKPIT_BACKEND
+              value: "http://{{ include "kockpit.component" (dict "root" . "name" "backend") }}:8080"
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.console.resources | nindent 12 }}
+{{- end }}
+{{- if and .Values.console.enabled .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "kockpit.fullname" . }}
+  labels:
+    {{- include "kockpit.labels" (dict "root" . "name" "console") | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- /* an empty host matches every host name (e.g. localhost:<port>) */}}
+    - {{- with .Values.ingress.host }} host: {{ . | quote }}
+      {{- end }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "kockpit.component" (dict "root" . "name" "console") }}
+                port:
+                  name: http
+{{- end }}

@@ -1,0 +1,127 @@
+{{- if .Values.opensearch.enabled }}
+{{- $c := dict "root" . "name" "opensearch" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  selector:
+    {{- include "kockpit.selectorLabels" $c | nindent 4 }}
+  ports:
+    - name: http
+      port: 9200
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  serviceName: {{ include "kockpit.component" $c }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kockpit.selectorLabels" $c | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kockpit.selectorLabels" $c | nindent 8 }}
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: opensearch
+          image: {{ .Values.opensearch.image }}
+          ports:
+            - name: http
+              containerPort: 9200
+          env:
+            - { name: discovery.type, value: single-node }
+            - { name: OPENSEARCH_JAVA_OPTS, value: {{ .Values.opensearch.javaOpts | quote }} }
+            - { name: DISABLE_SECURITY_PLUGIN, value: "true" }
+            - { name: DISABLE_INSTALL_DEMO_CONFIG, value: "true" }
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health?local=true
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.opensearch.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/opensearch/data
+      {{- if not .Values.opensearch.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+  {{- if .Values.opensearch.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with .Values.opensearch.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.opensearch.persistence.size }}
+  {{- end }}
+{{- end }}
+{{- if and .Values.opensearch.enabled .Values.dashboards.enabled }}
+{{- $d := dict "root" . "name" "dashboards" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kockpit.component" $d }}
+  labels:
+    {{- include "kockpit.labels" $d | nindent 4 }}
+spec:
+  selector:
+    {{- include "kockpit.selectorLabels" $d | nindent 4 }}
+  ports:
+    - name: http
+      port: 5601
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kockpit.component" $d }}
+  labels:
+    {{- include "kockpit.labels" $d | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kockpit.selectorLabels" $d | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kockpit.selectorLabels" $d | nindent 8 }}
+    spec:
+      containers:
+        - name: dashboards
+          image: {{ .Values.dashboards.image }}
+          ports:
+            - name: http
+              containerPort: 5601
+          env:
+            - name: OPENSEARCH_HOSTS
+              value: '["{{ include "kockpit.opensearchUrl" . }}"]'
+            - { name: DISABLE_SECURITY_DASHBOARDS_PLUGIN, value: "true" }
+          resources:
+            {{- toYaml .Values.dashboards.resources | nindent 12 }}
+{{- end }}

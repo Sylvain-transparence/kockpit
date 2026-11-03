@@ -1,0 +1,87 @@
+{{- if .Values.backend.enabled }}
+{{- $c := dict "root" . "name" "backend" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  selector:
+    {{- include "kockpit.selectorLabels" $c | nindent 4 }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  replicas: 1
+  # the data volume is ReadWriteOnce: stop the old pod before starting the new one
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "kockpit.selectorLabels" $c | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kockpit.selectorLabels" $c | nindent 8 }}
+      annotations:
+        # restart the backend (and re-copy the manifests) when they change
+        checksum/manifests: {{ include (print $.Template.BasePath "/data.yaml") . | sha256sum }}
+    spec:
+      {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
+      initContainers:
+        # the manifests ConfigMap is the source of truth: copied over the stored ones on every start
+        - name: copy-manifests
+          image: busybox:1.37
+          command: ["sh", "-c", "mkdir -p /data/manifests && cp -v /manifests/*.json /data/manifests/ 2>/dev/null || echo 'no manifest to copy'"]
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: manifests, mountPath: /manifests, readOnly: true }
+      containers:
+        - name: backend
+          image: {{ include "kockpit.image" (dict "root" . "image" .Values.backend.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 8090
+          env:
+            - { name: BOOTSTRAP_SERVERS, value: {{ include "kockpit.kafkaBootstrap" . | quote }} }
+            - { name: OPENSEARCH_ENDPOINTS, value: {{ include "kockpit.opensearchUrl" . | quote }} }
+            # must match the audit stream's INDEX_SUFFIX
+            - { name: INDEX_NAME, value: {{ .Values.indexName | quote }} }
+            - { name: NOTIFICATION_TOPIC, value: {{ .Values.auditTopic | quote }} }
+            - { name: FS_MANIFESTS_PATH, value: /data/manifests }
+            - { name: FS_STORAGE_PATH, value: /data }
+            {{- with .Values.backend.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            httpGet: { path: /actuator/health, port: management }
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: management }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: management }
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        {{- include "kockpit.dataVolume" . | nindent 8 }}
+        - name: manifests
+          configMap:
+            name: {{ include "kockpit.fullname" . }}-manifests
+{{- end }}
