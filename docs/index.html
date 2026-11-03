@@ -228,22 +228,6 @@
   .mod-samples{margin-top:20px; font-size:13.5px; color:var(--text-dim);}
   .mod-samples code{color:var(--blue); font-size:12.5px;}
 
-  /* ---------- capability cards ---------- */
-  .capgrid{display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;}
-  .capcard{
-    border:1px solid var(--line); border-radius:10px; padding:24px;
-    background:var(--panel); transition:border-color 0.15s;
-  }
-  .capcard:hover{border-color:var(--line-soft); border-color:#38414F;}
-  .capcard .icon-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
-  .capcard .tag{
-    font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint);
-    border:1px solid var(--line); border-radius:4px; padding:3px 8px;
-    letter-spacing:0.05em;
-  }
-  .capcard h3{font-family:var(--font-display); font-weight:600; font-size:16px; margin-bottom:8px;}
-  .capcard p{font-size:13.5px; color:var(--text-dim); line-height:1.6;}
-
   /* ---------- flight-log benefits ---------- */
   .log{border-top:1px solid var(--line-soft);}
   .log-entry{
@@ -451,7 +435,6 @@
     .panel-module:nth-child(2){border-right:none;}
     .mod-thumbs{grid-template-columns:repeat(2, 1fr);}
     .mod-parts{grid-template-columns:1fr;}
-    .capgrid{grid-template-columns:1fr;}
     .backends{grid-template-columns:1fr;}
     .qs-providers{grid-template-columns:repeat(2, 1fr);}
     .resgrid{grid-template-columns:1fr;}
@@ -529,9 +512,9 @@
         <div class="sub">Change values at runtime</div>
       </div>
       <div class="panel-module">
-        <div class="row1"><span class="led on"></span><span class="label">SQS control</span></div>
-        <div class="value">MANAGED</div>
-        <div class="sub">Queue visibility on AWS</div>
+        <div class="row1"><span class="led on"></span><span class="label">Instances health</span></div>
+        <div class="value">HEARTBEAT</div>
+        <div class="sub">Which instances are alive</div>
       </div>
     </div>
   </div>
@@ -598,7 +581,7 @@
       <button class="qs-provider" role="tab" id="mod-tab-console" aria-controls="mod-panel-console" aria-selected="false" data-module="console">
         <span class="pmono" aria-hidden="true">UI</span>
         <span class="pname">Console</span>
-        <span class="pdesc">The web console: audits, feature flags, configuration, caches and queues.</span>
+        <span class="pdesc">The web console: dashboard, audits, feature flags, configuration, caches and health.</span>
         <span class="pstate">Select</span>
       </button>
       <button class="qs-provider" role="tab" id="mod-tab-ai" aria-controls="mod-panel-ai" aria-selected="false" data-module="ai">
@@ -701,12 +684,12 @@
     <div class="mod-panel" role="tabpanel" id="mod-panel-console" aria-labelledby="mod-tab-console" data-mpanel="console">
       <div class="mhead"><h3>Kockpit Console</h3><span class="mpath">kockpit-core-applications/kockpit-console/</span></div>
       <p class="mintro">A React web console over the backend API: one place to search audits, open them end to end,
-      and operate the features running in your applications. See <a href="#console" style="color:var(--amber)">what it looks like</a>.</p>
+      and operate the features running in your applications. See <a href="#capabilities" style="color:var(--amber)">its pages</a> and <a href="#console" style="color:var(--amber)">what it looks like</a>.</p>
       <ul class="mod-parts">
         <li><span class="pname">Audits</span><span class="pinfo">Search, saved filters and a detail view per audit.</span></li>
         <li><span class="pname">Feature flipping · Dynamic configuration</span><span class="pinfo">Change flags and values at runtime.</span></li>
         <li><span class="pname">Caches</span><span class="pinfo">Cache statistics, clear and reset per application.</span></li>
-        <li><span class="pname">Queues</span><span class="pinfo">Manage SQS queues.</span></li>
+        <li><span class="pname">Home · Instances health</span><span class="pinfo">A dashboard of audit statistics, and the heartbeats of every instance.</span></li>
       </ul>
     </div>
 
@@ -731,33 +714,161 @@
     <div class="section-head">
       <div class="kicker"><span class="led amber"></span> How it helps</div>
       <h2>What you get on the console.</h2>
-      <p>Everything below is reachable from the Kockpit backend API and surfaced in the web console.</p>
+      <p>Each page of the web console, backed by the Kockpit backend API. Every page works on one
+      domain and environment at a time, picked from the console's header. Pick a page to see what you can do there.</p>
     </div>
-    <div class="capgrid">
-      <div class="capcard">
-        <div class="icon-row"><span class="led on"></span><span class="tag">AUDIT</span></div>
-        <h3>Full audit search</h3>
-        <p>Every input/output call, HTTP exchange, or key-value event your services emit, indexed
-        in OpenSearch and searchable from one place — across APIs and batch jobs alike.</p>
-      </div>
-      <div class="capcard">
-        <div class="icon-row"><span class="led amber"></span><span class="tag">FLAGS</span></div>
-        <h3>Feature flipping</h3>
-        <p>Turn features on and off for running services with a hot change — no build, no
-        redeploy, no restart window to coordinate.</p>
-      </div>
-      <div class="capcard">
-        <div class="icon-row"><span class="led blue"></span><span class="tag">CONFIG</span></div>
-        <h3>Dynamic configuration</h3>
-        <p>Push configuration changes to live applications the same way — hot, at runtime,
-        without shipping a new artifact.</p>
-      </div>
-      <div class="capcard">
-        <div class="icon-row"><span class="led on"></span><span class="tag">AWS</span></div>
-        <h3>SQS management</h3>
-        <p>Inspect and manage SQS queues on AWS directly from the console, alongside the rest
-        of your operational view.</p>
-      </div>
+
+    <div class="mod-thumbs qs-providers" role="tablist" aria-label="Choose a console page">
+      <button class="qs-provider" role="tab" id="cap-tab-home" aria-controls="cap-panel-home" aria-selected="true" data-module="home">
+        <span class="pmono" aria-hidden="true">HM</span>
+        <span class="pname">Home</span>
+        <span class="pdesc">Request volumes, success and error rates, per application and over time.</span>
+        <span class="pstate">Selected</span>
+      </button>
+      <button class="qs-provider" role="tab" id="cap-tab-search" aria-controls="cap-panel-search" aria-selected="false" data-module="search">
+        <span class="pmono" aria-hidden="true">AS</span>
+        <span class="pname">Audit search</span>
+        <span class="pdesc">Every call your services made, filtered by date, application and your own search fields.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="cap-tab-detail" aria-controls="cap-panel-detail" aria-selected="false" data-module="detail">
+        <span class="pmono" aria-hidden="true">AD</span>
+        <span class="pname">Audit details</span>
+        <span class="pdesc">One audit opened end to end: payloads, HTTP exchanges, rules, key-values.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="cap-tab-flags" aria-controls="cap-panel-flags" aria-selected="false" data-module="flags">
+        <span class="pmono" aria-hidden="true">FF</span>
+        <span class="pname">Feature flipping</span>
+        <span class="pdesc">Turn features on and off in running services, with a history of changes.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="cap-tab-config" aria-controls="cap-panel-config" aria-selected="false" data-module="config">
+        <span class="pmono" aria-hidden="true">DC</span>
+        <span class="pname">Dynamic configuration</span>
+        <span class="pdesc">Edit configuration values of running services, without a redeploy.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="cap-tab-cache" aria-controls="cap-panel-cache" aria-selected="false" data-module="cache">
+        <span class="pmono" aria-hidden="true">CA</span>
+        <span class="pname">Caches</span>
+        <span class="pdesc">Hit rates of your services' caches; clear them or reset their statistics.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="cap-tab-health" aria-controls="cap-panel-health" aria-selected="false" data-module="health">
+        <span class="pmono" aria-hidden="true">HB</span>
+        <span class="pname">Instances health</span>
+        <span class="pdesc">Which instances are alive, from the heartbeats they send.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="cap-tab-manifest" aria-controls="cap-panel-manifest" aria-selected="false" data-module="manifest">
+        <span class="pmono" aria-hidden="true">MF</span>
+        <span class="pname">Manifests &amp; settings</span>
+        <span class="pdesc">The manifests that declare your services, and your console preferences.</span>
+        <span class="pstate">Select</span>
+      </button>
+    </div>
+
+    <!-- ===== Home ===== -->
+    <div class="mod-panel active" role="tabpanel" id="cap-panel-home" aria-labelledby="cap-tab-home" data-mpanel="home">
+      <div class="mhead"><h3>Home</h3><span class="mpath">/home</span></div>
+      <p class="mintro">The landing page: a dashboard built from the audits of the selected domain and environment.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Overview</span><span class="pinfo">Total requests, success rate (2xx), error rate (4xx and 5xx) and average response time.</span></li>
+        <li><span class="pname">Time range</span><span class="pinfo">From the last hour to the last 30 days.</span></li>
+        <li><span class="pname">Per application</span><span class="pinfo">Request distribution and HTTP status codes by application.</span></li>
+        <li><span class="pname">Over time</span><span class="pinfo">Request volume over time, per application.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Audit search ===== -->
+    <div class="mod-panel" role="tabpanel" id="cap-panel-search" aria-labelledby="cap-tab-search" data-mpanel="search">
+      <div class="mhead"><h3>Audit search</h3><span class="mpath">/audits</span></div>
+      <p class="mintro">Every input and output call, HTTP exchange and key-value event your services emit, indexed in
+      OpenSearch and searchable from one place, for APIs and batch jobs alike.
+      See <a href="#console" style="color:var(--amber)">the screenshot</a>.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Date range</span><span class="pinfo">A custom range, or quick presets.</span></li>
+        <li><span class="pname">Filters</span><span class="pinfo">By application, and by the search fields your configuration declares (advanced filters).</span></li>
+        <li><span class="pname">Saved filters</span><span class="pinfo">Keep the searches you run often, and run them again in one click.</span></li>
+        <li><span class="pname">Results</span><span class="pinfo">A paginated list; open any line to see the audit in full.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Audit details ===== -->
+    <div class="mod-panel" role="tabpanel" id="cap-panel-detail" aria-labelledby="cap-tab-detail" data-mpanel="detail">
+      <div class="mhead"><h3>Audit details</h3><span class="mpath">/audits/:id</span></div>
+      <p class="mintro">One audit opened end to end, with a tab per view.
+      See <a href="#audit" style="color:var(--amber)">every view, with screenshots</a>.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Overview</span><span class="pinfo">Application, version, host, domain and environment; audit, request and trace ids; start, end and duration.</span></li>
+        <li><span class="pname">Request / Response</span><span class="pinfo">The payloads that came in and went out.</span></li>
+        <li><span class="pname">HTTP exchanges</span><span class="pinfo">The outgoing HTTP calls the service made while handling it.</span></li>
+        <li><span class="pname">Rules</span><span class="pinfo">The rules and flows that ran, as a map or a timeline.</span></li>
+        <li><span class="pname">Key-values</span><span class="pinfo">The key-value events recorded along the way.</span></li>
+        <li><span class="pname">JSON</span><span class="pinfo">The raw audit document.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Feature flipping ===== -->
+    <div class="mod-panel" role="tabpanel" id="cap-panel-flags" aria-labelledby="cap-tab-flags" data-mpanel="flags">
+      <div class="mhead"><h3>Feature flipping</h3><span class="mpath">/feature-flipping/:service</span></div>
+      <p class="mintro">Turn features on and off in running services: no build, no redeploy, no restart window to
+      coordinate. See <a href="#console" style="color:var(--amber)">the screenshot</a>.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Flags per service</span><span class="pinfo">Each service declared in a manifest has its own list of flags.</span></li>
+        <li><span class="pname">Republish</span><span class="pinfo">Force-publish every flag to the service's instances again.</span></li>
+        <li><span class="pname">History</span><span class="pinfo">Recent changes, with who made them and when.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Dynamic configuration ===== -->
+    <div class="mod-panel" role="tabpanel" id="cap-panel-config" aria-labelledby="cap-tab-config" data-mpanel="config">
+      <div class="mhead"><h3>Dynamic configuration</h3><span class="mpath">/dyna-config/:service</span></div>
+      <p class="mintro">Change configuration values of live applications the same way: at runtime, without shipping a
+      new artifact. See <a href="#console" style="color:var(--amber)">the screenshot</a>.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Values per service</span><span class="pinfo">Each service's configuration keys and their current values.</span></li>
+        <li><span class="pname">Edit in place</span><span class="pinfo">Change a value, then confirm or cancel.</span></li>
+        <li><span class="pname">Republish</span><span class="pinfo">Force-publish the whole configuration to the service's instances again.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Caches ===== -->
+    <div class="mod-panel" role="tabpanel" id="cap-panel-cache" aria-labelledby="cap-tab-cache" data-mpanel="cache">
+      <div class="mhead"><h3>Caches</h3><span class="mpath">/cache</span></div>
+      <p class="mintro">The caches of each service, as reported by the services themselves.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Statistics</span><span class="pinfo">Caches, total gets, total hits and hit rate.</span></li>
+        <li><span class="pname">Clear</span><span class="pinfo">Publish a reset message, so every instance empties the cache.</span></li>
+        <li><span class="pname">Reset statistics</span><span class="pinfo">Start the counters again from zero.</span></li>
+        <li><span class="pname">Refresh</span><span class="pinfo">Reload the latest statistics from the backend.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Instances health ===== -->
+    <div class="mod-panel" role="tabpanel" id="cap-panel-health" aria-labelledby="cap-tab-health" data-mpanel="health">
+      <div class="mhead"><h3>Instances health</h3><span class="mpath">/health</span></div>
+      <p class="mintro">Every instance of your services sends a heartbeat; this page shows how recent each one is.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Healthy</span><span class="pinfo">Last heartbeat less than 3 minutes ago.</span></li>
+        <li><span class="pname">Warning</span><span class="pinfo">Last heartbeat 3 to 5 minutes ago.</span></li>
+        <li><span class="pname">Critical</span><span class="pinfo">Last heartbeat more than 5 minutes ago.</span></li>
+        <li><span class="pname">Health rate</span><span class="pinfo">The share of healthy instances.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Manifests & settings ===== -->
+    <div class="mod-panel" role="tabpanel" id="cap-panel-manifest" aria-labelledby="cap-tab-manifest" data-mpanel="manifest">
+      <div class="mhead"><h3>Manifests &amp; settings</h3><span class="mpath">/manifest · /settings</span></div>
+      <p class="mintro">Manifests declare your domains, environments and services; the console builds its menus from
+      them. Settings keep your own preferences, in the browser.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Manifests</span><span class="pinfo">See the services each manifest declares, upload a new manifest (JSON) or download one.</span></li>
+        <li><span class="pname">Favorite</span><span class="pinfo">A favorite domain and environment, loaded by default when you come back.</span></li>
+        <li><span class="pname">Page size · Auto-refresh</span><span class="pinfo">Default page size of the audit search, auto-refresh rate of the health page.</span></li>
+        <li><span class="pname">Truncation</span><span class="pinfo">How long a configuration value can be before it is truncated.</span></li>
+      </ul>
     </div>
   </div>
 </section>
@@ -1304,19 +1415,21 @@
     });
   });
 
-  // what it is: module thumbnails, same behaviour as the quick start provider cards
-  document.querySelectorAll('#what .qs-provider').forEach(function(card){
+  // what it is + capabilities: thumbnails with a detail panel, same behaviour as the quick start provider cards
+  ['#what', '#capabilities'].forEach(function(section){
+  document.querySelectorAll(section + ' .qs-provider').forEach(function(card){
     card.addEventListener('click', function(){
       var target = card.getAttribute('data-module');
-      document.querySelectorAll('#what .qs-provider').forEach(function(c){
+      document.querySelectorAll(section + ' .qs-provider').forEach(function(c){
         var selected = c === card;
         c.setAttribute('aria-selected', selected ? 'true' : 'false');
         c.querySelector('.pstate').textContent = selected ? 'Selected' : 'Select';
       });
-      document.querySelectorAll('.mod-panel').forEach(function(p){
+      document.querySelectorAll(section + ' .mod-panel').forEach(function(p){
         p.classList.toggle('active', p.getAttribute('data-mpanel') === target);
       });
     });
+  });
   });
 
   // copy buttons on the quick start code blocks
