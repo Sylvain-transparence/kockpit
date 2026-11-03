@@ -203,25 +203,30 @@
   .section-head p{margin-top:14px; color:var(--text-dim); font-size:16px;}
   .border-top{border-top:1px solid var(--line-soft);}
 
-  /* ---------- module composition grid ---------- */
-  .modgrid{display:grid; grid-template-columns:repeat(3, 1fr); gap:1px; background:var(--line);}
-  .modcard{
-    background:var(--bg); padding:26px 24px;
-    display:flex; flex-direction:column; gap:10px;
+  /* ---------- modules: thumbnails (same cards as the quick start) + a detail panel ---------- */
+  .mod-thumbs{display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;}
+  .mod-thumbs .qs-provider .pdesc{min-height:3em;}
+  .mod-panel{display:none; margin-top:32px; border:1px solid var(--line); border-radius:10px; background:var(--panel); padding:26px 28px;}
+  .mod-panel.active{display:block;}
+  .mod-panel .mhead{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .mod-panel h3{font-family:var(--font-display); font-weight:600; font-size:20px;}
+  .mod-panel .mpath{font-family:var(--font-mono); font-size:12px; color:var(--text-faint);}
+  .mod-panel .mintro{margin-top:8px; font-size:14.5px; color:var(--text-dim); max-width:760px; line-height:1.6;}
+  .mod-panel .mintro code, .mod-panel .mnote code{color:var(--blue); font-size:12.5px;}
+  .mod-parts{
+    list-style:none; margin-top:20px;
+    display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1px;
+    background:var(--line-soft); border:1px solid var(--line-soft); border-radius:8px; overflow:hidden;
   }
-  .modcard .mtitle{
-    font-family:var(--font-display); font-weight:600; font-size:17px;
-    display:flex; align-items:center; gap:9px;
-  }
-  .modcard p{font-size:14px; color:var(--text-dim); line-height:1.6;}
-  .modcard ul{list-style:none; margin-top:4px; display:flex; flex-direction:column; gap:6px;}
-  .modcard li{
-    font-size:13px; color:var(--text-dim); font-family:var(--font-mono);
-    padding-left:14px; position:relative;
-  }
-  .modcard li::before{
-    content:'›'; position:absolute; left:0; color:var(--text-faint);
-  }
+  .mod-parts li{background:var(--panel); padding:12px 16px; display:flex; flex-direction:column; gap:3px;}
+  .mod-parts .pname{font-family:var(--font-mono); font-size:12.5px; color:var(--text); font-weight:500;}
+  .mod-parts .pinfo{font-size:13px; color:var(--text-dim); line-height:1.5;}
+  .mod-parts li:last-child:nth-child(odd){grid-column:1 / -1;}
+  .mod-parts code{color:var(--blue); font-size:12px;}
+  .mod-panel .mnote{margin-top:16px; font-size:13px; color:var(--text-dim); border-left:2px solid var(--line); padding-left:14px;}
+  .mod-panel .mnote b{color:var(--text); font-weight:500;}
+  .mod-samples{margin-top:20px; font-size:13.5px; color:var(--text-dim);}
+  .mod-samples code{color:var(--blue); font-size:12.5px;}
 
   /* ---------- capability cards ---------- */
   .capgrid{display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;}
@@ -444,7 +449,8 @@
   @media (max-width: 860px){
     .panel-strip{grid-template-columns:repeat(2, 1fr);}
     .panel-module:nth-child(2){border-right:none;}
-    .modgrid{grid-template-columns:1fr;}
+    .mod-thumbs{grid-template-columns:repeat(2, 1fr);}
+    .mod-parts{grid-template-columns:1fr;}
     .capgrid{grid-template-columns:1fr;}
     .backends{grid-template-columns:1fr;}
     .qs-providers{grid-template-columns:repeat(2, 1fr);}
@@ -548,46 +554,175 @@
     <div class="section-head">
       <div class="kicker"><span class="led on"></span> What it is</div>
       <h2>One platform, built out of modules you can take individually.</h2>
-      <p>Kockpit isn't a monolith bolted onto your services — it's a composition of focused
-      modules that cover auditing, rules, backends, and the web console that ties them together.</p>
+      <p>Kockpit isn't a monolith bolted onto your services. Your applications embed a few Spring Boot
+      starters; a backend, a stream and a web console run beside them. Pick a module to see what it is made of.</p>
     </div>
-  </div>
-  <div class="modgrid">
-    <div class="modcard">
-      <div class="mtitle"><span class="led on"></span>Kockpit Audit</div>
-      <p>Captures input and output calls, HTTP exchanges, and key-value events for any API,
-      batch job, or application you point it at, then indexes them into OpenSearch for search.</p>
+
+    <div class="mod-thumbs qs-providers" role="tablist" aria-label="Choose a module">
+      <button class="qs-provider" role="tab" id="mod-tab-audit" aria-controls="mod-panel-audit" aria-selected="true" data-module="audit">
+        <span class="pmono" aria-hidden="true">AU</span>
+        <span class="pname">Audit</span>
+        <span class="pdesc">Captures the calls your APIs and batch jobs make, and masks sensitive data.</span>
+        <span class="pstate">Selected</span>
+      </button>
+      <button class="qs-provider" role="tab" id="mod-tab-features" aria-controls="mod-panel-features" aria-selected="false" data-module="features">
+        <span class="pmono" aria-hidden="true">FT</span>
+        <span class="pname">Features</span>
+        <span class="pdesc">Feature flags, dynamic configuration, cache and heartbeat, run from the console.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="mod-tab-rules" aria-controls="mod-panel-rules" aria-selected="false" data-module="rules">
+        <span class="pmono" aria-hidden="true">RL</span>
+        <span class="pname">Rules</span>
+        <span class="pdesc">A rule engine with its own DSL, a Maven plugin and a visual designer.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="mod-tab-core" aria-controls="mod-panel-core" aria-selected="false" data-module="core">
+        <span class="pmono" aria-hidden="true">CO</span>
+        <span class="pname">Core</span>
+        <span class="pdesc">The messaging layer between your apps and the backend, on files, S3 or Azure Storage.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="mod-tab-backend" aria-controls="mod-panel-backend" aria-selected="false" data-module="backend">
+        <span class="pmono" aria-hidden="true">BE</span>
+        <span class="pname">Backend</span>
+        <span class="pdesc">The API behind the console: audit search, dashboards, features and authentication.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="mod-tab-stream" aria-controls="mod-panel-stream" aria-selected="false" data-module="stream">
+        <span class="pmono" aria-hidden="true">ST</span>
+        <span class="pname">Stream</span>
+        <span class="pdesc">Moves audits from Kafka or Kinesis into OpenSearch, and archives them to S3.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="mod-tab-console" aria-controls="mod-panel-console" aria-selected="false" data-module="console">
+        <span class="pmono" aria-hidden="true">UI</span>
+        <span class="pname">Console</span>
+        <span class="pdesc">The web console: audits, feature flags, configuration, caches and queues.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="mod-tab-ai" aria-controls="mod-panel-ai" aria-selected="false" data-module="ai">
+        <span class="pmono" aria-hidden="true">AI</span>
+        <span class="pname">AI</span>
+        <span class="pdesc">An MCP server that lets AI assistants search your audits.</span>
+        <span class="pstate">Select</span>
+      </button>
     </div>
-    <div class="modcard">
-      <div class="mtitle"><span class="led amber"></span>Kockpit Rules</div>
-      <p>A rule engine with its own DSL: rule definitions, an executor, a registry, and a Maven
-      plugin that generates the rules DSL straight from a JSON input file.</p>
-      <ul>
-        <li>Rules starter</li>
-        <li>Rules maven plugin</li>
-        <li>Rules Designer (React/Vite)</li>
+
+    <!-- ===== Audit ===== -->
+    <div class="mod-panel active" role="tabpanel" id="mod-panel-audit" aria-labelledby="mod-tab-audit" data-mpanel="audit">
+      <div class="mhead"><h3>Kockpit Audit</h3><span class="mpath">kockpit-audit/</span></div>
+      <p class="mintro">The libraries your applications embed to record what they do: incoming and outgoing calls,
+      HTTP exchanges and key-value events, for APIs and batch jobs alike. Audits are published as messages and end up
+      indexed in OpenSearch, searchable from the console.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">kockpit-audit-annotation</span><span class="pinfo"><code>@Audited</code> and <code>AuditCommandLineRunner</code>, to audit methods and batch jobs.</span></li>
+        <li><span class="pname">kockpit-audit-api · -api-impl · -sdk</span><span class="pinfo">The audit model, the API that builds and publishes audits, and its Spring Boot auto-configuration.</span></li>
+        <li><span class="pname">kockpit-obfuscation</span><span class="pinfo">Masks sensitive fields in JSON and XML payloads before they are stored.</span></li>
+        <li><span class="pname">kockpit-audit-rules</span><span class="pinfo">Audits each rule and flow run by the Kockpit rule engine.</span></li>
+        <li><span class="pname">kockpit-audit-openapi</span><span class="pinfo">Tags each audit with the OpenAPI operation id of the call.</span></li>
+        <li><span class="pname">kockpit-features-audit</span><span class="pinfo">Audits the HTTP exchanges of <code>RestTemplate</code>, <code>RestClient</code> and <code>WebClient</code>, with Kafka and Event Hub starters.</span></li>
+      </ul>
+      <p class="mnote"><b>Note:</b> <code>kockpit-audit-web</code> is deprecated; use <code>kockpit-features-audit</code> instead.</p>
+    </div>
+
+    <!-- ===== Features ===== -->
+    <div class="mod-panel" role="tabpanel" id="mod-panel-features" aria-labelledby="mod-tab-features" data-mpanel="features">
+      <div class="mhead"><h3>Kockpit Features</h3><span class="mpath">kockpit-features/</span></div>
+      <p class="mintro">Runtime features your applications pick up from a starter, and that the console drives
+      through the backend. Each feature comes in two halves: an application side, embedded in your service, and
+      a backend side, which serves it to the console.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">kockpit-features-featureflipping</span><span class="pinfo">Feature flags you turn on and off from the console, without a redeploy.</span></li>
+        <li><span class="pname">kockpit-features-dynaconfig</span><span class="pinfo">Configuration values you change at runtime.</span></li>
+        <li><span class="pname">kockpit-features-cache</span><span class="pinfo">Cache statistics per application; clear a cache or reset its statistics from the console.</span></li>
+        <li><span class="pname">kockpit-features-heartbeat</span><span class="pinfo">Applications report that they are alive, so the console knows what is running where.</span></li>
+        <li><span class="pname">kockpit-features-manifest</span><span class="pinfo">Application manifests stored on the filesystem, S3 or Azure Storage, and served to the console.</span></li>
+        <li><span class="pname">kockpit-features-audit</span><span class="pinfo">HTTP exchange auditing; see <b>Audit</b>.</span></li>
       </ul>
     </div>
-    <div class="modcard">
-      <div class="mtitle"><span class="led blue"></span>Kockpit Backends</div>
-      <p>Pluggable backend implementations for where audit data actually lives: local filesystem,
-      Azure storage and Event Hub, or AWS S3 and Kinesis.</p>
+
+    <!-- ===== Rules ===== -->
+    <div class="mod-panel" role="tabpanel" id="mod-panel-rules" aria-labelledby="mod-tab-rules" data-mpanel="rules">
+      <div class="mhead"><h3>Kockpit Rules</h3><span class="mpath">kockpit-rules/</span></div>
+      <p class="mintro">A rule engine with its own DSL. Rules are defined once, generated from a JSON file at build time,
+      and executed and audited at run time.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">kockpit-rules-starter</span><span class="pinfo">The Spring Boot starter: rule definitions, executor and registry.</span></li>
+        <li><span class="pname">kockpit-rules-maven-plugin</span><span class="pinfo">Generates the rules DSL from a JSON input file during the build.</span></li>
+        <li><span class="pname">kockpit-rules-designer</span><span class="pinfo">A React/Vite app to design rules visually.</span></li>
+        <li><span class="pname">kockpit-rules-app-sample</span><span class="pinfo">A runnable application using the starter and the plugin.</span></li>
+      </ul>
+      <p class="mnote"><b>Versions:</b> the 2.x starter and plugin need Spring Boot 4 and Java 21; stay on 1.x for Spring Boot 3.</p>
     </div>
-    <div class="modcard">
-      <div class="mtitle"><span class="led on"></span>Kockpit Console</div>
-      <p>The web console for the platform — a single pane of glass over audits, feature flags,
-      dynamic configuration, and queue management, backed by the Kockpit backend API.</p>
+
+    <!-- ===== Core ===== -->
+    <div class="mod-panel" role="tabpanel" id="mod-panel-core" aria-labelledby="mod-tab-core" data-mpanel="core">
+      <div class="mhead"><h3>Kockpit Core</h3><span class="mpath">kockpit-core/</span></div>
+      <p class="mintro">The plumbing every other module sits on: a publish/consume messaging abstraction between your
+      applications and the Kockpit backend, with one implementation per storage. Changing storage means changing a dependency,
+      not your code.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">kockpit-core-communication</span><span class="pinfo">The <code>Publisher</code> / <code>Consumer</code> message API.</span></li>
+        <li><span class="pname">kockpit-core-communication-filesystem</span><span class="pinfo">Messages on a local or shared folder, for development and single-node setups.</span></li>
+        <li><span class="pname">kockpit-core-communication-s3</span><span class="pinfo">Messages on AWS S3.</span></li>
+        <li><span class="pname">kockpit-core-communication-storageaccount</span><span class="pinfo">Messages on an Azure Storage account.</span></li>
+        <li><span class="pname">kockpit-core-communication-polling</span><span class="pinfo">Polls the storage for new messages.</span></li>
+        <li><span class="pname">kockpit-core-sdk</span><span class="pinfo">Service definitions and message listeners the features build on.</span></li>
+      </ul>
     </div>
-    <div class="modcard">
-      <div class="mtitle"><span class="led amber"></span>Kockpit AI</div>
-      <p>An MCP server built on Spring AI that exposes audit search to AI agents, so assistants
-      can query what your systems have been doing without a custom integration.</p>
+
+    <!-- ===== Backend ===== -->
+    <div class="mod-panel" role="tabpanel" id="mod-panel-backend" aria-labelledby="mod-tab-backend" data-mpanel="backend">
+      <div class="mhead"><h3>Kockpit Backend</h3><span class="mpath">kockpit-core-applications/kockpit-backend-application/</span></div>
+      <p class="mintro">The Spring Boot application behind the console. It assembles the backend services and the
+      backend side of every feature, and ships as one Docker image per storage.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">kockpit-backend-service-search</span><span class="pinfo">Audit search on OpenSearch, including AWS-signed requests.</span></li>
+        <li><span class="pname">kockpit-backend-service-dashboard</span><span class="pinfo">Audit statistics per application: volumes, status distribution and trends over time.</span></li>
+        <li><span class="pname">kockpit-backend-authentication-basic</span><span class="pinfo">The signed-in user and their Cognito groups.</span></li>
+        <li><span class="pname">Images</span><span class="pinfo"><code>kockpit-backend-application-filesystem</code>, <code>-aws</code>, <code>-azure</code> and <code>-azure-eventhub</code>.</span></li>
+      </ul>
     </div>
-    <div class="modcard">
-      <div class="mtitle"><span class="led blue"></span>Core + Samples</div>
-      <p>Shared core libraries plus runnable sample applications, so every module ships with a
-      working example of how to wire it into a real project.</p>
+
+    <!-- ===== Stream ===== -->
+    <div class="mod-panel" role="tabpanel" id="mod-panel-stream" aria-labelledby="mod-tab-stream" data-mpanel="stream">
+      <div class="mhead"><h3>Kockpit Stream</h3><span class="mpath">kockpit-core-applications/</span></div>
+      <p class="mintro">The applications that carry audits from your services to where they are searched and kept, as they
+      arrive rather than in a batch job.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">kockpit-audit-stream</span><span class="pinfo">Reads audits from Kafka or Kinesis (with or without enhanced fan-out) and indexes them into OpenSearch.</span></li>
+        <li><span class="pname">kockpit-kinesis-s3-application</span><span class="pinfo">Reads audits from Kinesis and writes them to S3 for long-term storage.</span></li>
+        <li><span class="pname">Images</span><span class="pinfo"><code>kockpit-audit-stream-application-kafka</code>, <code>-aws</code> and <code>-aws-efo</code>; <code>kockpit-kinesis-s3-application</code>.</span></li>
+      </ul>
     </div>
+
+    <!-- ===== Console ===== -->
+    <div class="mod-panel" role="tabpanel" id="mod-panel-console" aria-labelledby="mod-tab-console" data-mpanel="console">
+      <div class="mhead"><h3>Kockpit Console</h3><span class="mpath">kockpit-core-applications/kockpit-console/</span></div>
+      <p class="mintro">A React web console over the backend API: one place to search audits, open them end to end,
+      and operate the features running in your applications. See <a href="#console" style="color:var(--amber)">what it looks like</a>.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">Audits</span><span class="pinfo">Search, saved filters and a detail view per audit.</span></li>
+        <li><span class="pname">Feature flipping · Dynamic configuration</span><span class="pinfo">Change flags and values at runtime.</span></li>
+        <li><span class="pname">Caches</span><span class="pinfo">Cache statistics, clear and reset per application.</span></li>
+        <li><span class="pname">Queues</span><span class="pinfo">Manage SQS queues.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== AI ===== -->
+    <div class="mod-panel" role="tabpanel" id="mod-panel-ai" aria-labelledby="mod-tab-ai" data-mpanel="ai">
+      <div class="mhead"><h3>Kockpit AI</h3><span class="mpath">kockpit-ai/</span></div>
+      <p class="mintro">An MCP server built on Spring AI that exposes audit search to AI agents, so an assistant can ask
+      what your systems have been doing without a custom integration.</p>
+      <ul class="mod-parts">
+        <li><span class="pname">kockpit-ai-mcp-server</span><span class="pinfo">The MCP server, searching audits on OpenSearch.</span></li>
+        <li><span class="pname">kockpit-ai-mcp-server-aws</span><span class="pinfo">The same server for Amazon OpenSearch Service, with signed requests.</span></li>
+      </ul>
+    </div>
+
+    <p class="mod-samples"><b style="color:var(--text);font-weight:500">Samples:</b> <code>kockpit-samples/kockpit-sample-all</code>
+    wires the audit and feature starters into one runnable application; the Azure, filesystem and Kubernetes stacks run it.</p>
   </div>
 </section>
 
@@ -1153,11 +1288,11 @@
   });
 
   // quick start: provider cards (disabled ones, like Kubernetes, are not selectable)
-  document.querySelectorAll('.qs-provider').forEach(function(card){
+  document.querySelectorAll('#quickstart .qs-provider').forEach(function(card){
     card.addEventListener('click', function(){
       if (card.getAttribute('aria-disabled') === 'true') return;
       var target = card.getAttribute('data-provider');
-      document.querySelectorAll('.qs-provider').forEach(function(c){
+      document.querySelectorAll('#quickstart .qs-provider').forEach(function(c){
         if (c.getAttribute('aria-disabled') === 'true') return;
         var selected = c === card;
         c.setAttribute('aria-selected', selected ? 'true' : 'false');
@@ -1165,6 +1300,21 @@
       });
       document.querySelectorAll('.qs-panel').forEach(function(p){
         p.classList.toggle('active', p.getAttribute('data-panel') === target);
+      });
+    });
+  });
+
+  // what it is: module thumbnails, same behaviour as the quick start provider cards
+  document.querySelectorAll('#what .qs-provider').forEach(function(card){
+    card.addEventListener('click', function(){
+      var target = card.getAttribute('data-module');
+      document.querySelectorAll('#what .qs-provider').forEach(function(c){
+        var selected = c === card;
+        c.setAttribute('aria-selected', selected ? 'true' : 'false');
+        c.querySelector('.pstate').textContent = selected ? 'Selected' : 'Select';
+      });
+      document.querySelectorAll('.mod-panel').forEach(function(p){
+        p.classList.toggle('active', p.getAttribute('data-mpanel') === target);
       });
     });
   });
