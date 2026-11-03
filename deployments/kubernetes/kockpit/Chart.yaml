@@ -1,0 +1,16 @@
+apiVersion: v2
+name: kockpit
+description: >-
+  Kockpit quick start: Kafka, OpenSearch, the audit stream, the backend (filesystem storage), the web console
+  and a sample application, on a single-node cluster (kind, minikube, Docker Desktop).
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/mahieddine-ichir/kockpit
+sources:
+  - https://github.com/mahieddine-ichir/kockpit
+keywords:
+  - audit
+  - feature-flipping
+  - opensearch
+  - kafka

@@ -1,0 +1,116 @@
+# Kockpit images (GitHub Container Registry). `latest` is built from the default branch.
+image:
+  registry: ghcr.io/mahieddine-ichir/kockpit
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets: []
+
+# ---------------------------------------------------------------------------------------------------------------
+# Infrastructure
+# ---------------------------------------------------------------------------------------------------------------
+
+kafka:
+  # set to false and fill externalBootstrapServers to use an existing Kafka
+  enabled: true
+  externalBootstrapServers: ""
+  image: apache/kafka:4.3.1
+  partitions: 3
+  persistence:
+    enabled: false
+    size: 2Gi
+    storageClass: ""
+  resources:
+    requests: { cpu: 100m, memory: 512Mi }
+    limits: { memory: 1Gi }
+
+opensearch:
+  # set to false and fill externalUrl to use an existing OpenSearch (security plugin disabled or proxied)
+  enabled: true
+  externalUrl: ""
+  image: opensearchproject/opensearch:3.9.0
+  javaOpts: "-Xms512m -Xmx512m"
+  persistence:
+    enabled: false
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests: { cpu: 200m, memory: 1Gi }
+    limits: { memory: 1536Mi }
+
+dashboards:
+  enabled: false
+  image: opensearchproject/opensearch-dashboards:3.9.0
+  resources:
+    requests: { cpu: 100m, memory: 512Mi }
+    limits: { memory: 1Gi }
+
+# ---------------------------------------------------------------------------------------------------------------
+# Kockpit applications
+# ---------------------------------------------------------------------------------------------------------------
+
+# index name shared by the audit stream (writer) and the backend (reader):
+# audits are searched through the kockpit-<indexName>-<env>-read alias
+indexName: auditdata
+# Kafka topic the applications publish audits to and the stream consumes
+auditTopic: audits
+
+auditStream:
+  enabled: true
+  image: kockpit-audit-stream-application-kafka
+  env: []
+  resources:
+    requests: { cpu: 100m, memory: 384Mi }
+    limits: { memory: 768Mi }
+
+backend:
+  enabled: true
+  image: kockpit-backend-application-filesystem
+  env: []
+  resources:
+    requests: { cpu: 100m, memory: 384Mi }
+    limits: { memory: 768Mi }
+
+console:
+  enabled: true
+  image: kockpit-console
+  service:
+    port: 80
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+sampleApp:
+  # sample application generating audits, see the quick start for its API
+  enabled: true
+  image: kockpit-sample-all-filesystem
+  # how often buffered audits are sent to Kafka
+  notificationDelayMs: 5000
+  env: []
+  resources:
+    requests: { cpu: 100m, memory: 384Mi }
+    limits: { memory: 768Mi }
+
+# Filesystem storage shared by the backend and the sample application (manifests, audit payloads, communication).
+# A ReadWriteOnce volume can only be shared by pods on the same node: fine on a single-node cluster.
+# With persistence disabled, each pod gets its own emptyDir and the two don't share files.
+data:
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+# Manifests copied into the backend's storage on every start (files/manifests/*.json plus the ones below),
+# overwriting the copies there: manifest changes saved from the console are lost when the backend restarts.
+manifests:
+  fromFiles: true
+  # extra manifests, file name -> JSON content
+  extra: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: kockpit.localhost
+  tls: []

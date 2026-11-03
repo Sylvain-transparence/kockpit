@@ -1,0 +1,70 @@
+{{- if .Values.sampleApp.enabled }}
+{{- $c := dict "root" . "name" "sample-app" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  selector:
+    {{- include "kockpit.selectorLabels" $c | nindent 4 }}
+  ports:
+    - name: http
+      port: 8082
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  replicas: 1
+  # the data volume is ReadWriteOnce: stop the old pod before starting the new one
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "kockpit.selectorLabels" $c | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kockpit.selectorLabels" $c | nindent 8 }}
+    spec:
+      {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: sample-app
+          image: {{ include "kockpit.image" (dict "root" . "image" .Values.sampleApp.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8082
+          env:
+            # read by spring.kafka.producer.bootstrap-servers in the sample's application.yml
+            - { name: BOOTSTRAP_SERVERS, value: {{ include "kockpit.kafkaBootstrap" . | quote }} }
+            - { name: FS_STORAGE_PATH, value: /data }
+            - { name: kockpit.audit.notification.kafka.topic, value: {{ .Values.auditTopic | quote }} }
+            - { name: kockpit.audit.notification.async-delay-ms, value: {{ .Values.sampleApp.notificationDelayMs | quote }} }
+            {{- with .Values.sampleApp.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          # no actuator in the sample app: TCP checks only
+          startupProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.sampleApp.resources | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        {{- include "kockpit.dataVolume" . | nindent 8 }}
+{{- end }}

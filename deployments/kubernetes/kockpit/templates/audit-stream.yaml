@@ -1,0 +1,64 @@
+{{- if .Values.auditStream.enabled }}
+{{- $c := dict "root" . "name" "audit-stream" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  selector:
+    {{- include "kockpit.selectorLabels" $c | nindent 4 }}
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kockpit.selectorLabels" $c | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kockpit.selectorLabels" $c | nindent 8 }}
+    spec:
+      {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: audit-stream
+          image: {{ include "kockpit.image" (dict "root" . "image" .Values.auditStream.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8081
+            - name: management
+              containerPort: 8091
+          env:
+            - { name: BOOTSTRAP_SERVERS, value: {{ include "kockpit.kafkaBootstrap" . | quote }} }
+            - { name: OPENSEARCH_ENDPOINTS, value: {{ include "kockpit.opensearchUrl" . | quote }} }
+            # must match the backend's INDEX_NAME
+            - { name: INDEX_SUFFIX, value: {{ .Values.indexName | quote }} }
+            - { name: kockpit.audit.stream.kafka.topics, value: {{ .Values.auditTopic | quote }} }
+            {{- with .Values.auditStream.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            httpGet: { path: /actuator/health, port: management }
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: management }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: management }
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.auditStream.resources | nindent 12 }}
+{{- end }}

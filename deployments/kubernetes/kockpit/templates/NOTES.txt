@@ -1,0 +1,29 @@
+Kockpit is starting in namespace {{ .Release.Namespace }}. The Java applications take a minute or two:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }} -w
+
+{{- if .Values.console.enabled }}
+
+Open the console:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}
+{{- else }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kockpit.component" (dict "root" . "name" "console") }} 3000:{{ .Values.console.service.port }}
+  then http://localhost:3000
+{{- end }}
+{{- end }}
+
+{{- if .Values.sampleApp.enabled }}
+
+Generate audits with the sample application:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kockpit.component" (dict "root" . "name" "sample-app") }} 8082:8082
+  curl http://localhost:8082/sample-app/api/sayHello/kockpit
+  curl -X POST http://localhost:8082/sample-app/api/createMessage -H 'Content-Type: application/json' -d '{"message":"hello"}'
+{{- end }}
+
+{{- if .Values.opensearch.enabled }}
+
+Load the sample audits (optional), from the repository root:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kockpit.component" (dict "root" . "name" "opensearch") }} 9200:9200
+  cd docker/opensearch/init/data && INDEX_NAME={{ .Values.indexName }} bash init-data.sh
+{{- end }}
