@@ -228,18 +228,6 @@
   .mod-samples{margin-top:20px; font-size:13.5px; color:var(--text-dim);}
   .mod-samples code{color:var(--blue); font-size:12.5px;}
 
-  /* ---------- flight-log benefits ---------- */
-  .log{border-top:1px solid var(--line-soft);}
-  .log-entry{
-    display:grid; grid-template-columns:120px 1fr; gap:24px;
-    padding:22px 0; border-bottom:1px solid var(--line-soft);
-  }
-  .log-entry:last-child{border-bottom:none;}
-  .log-entry .tstamp{
-    font-family:var(--font-mono); font-size:12px; color:var(--text-faint); padding-top:3px;
-  }
-  .log-entry h4{font-family:var(--font-display); font-weight:600; font-size:16px; margin-bottom:6px;}
-  .log-entry p{font-size:14px; color:var(--text-dim); max-width:560px;}
 
   /* ---------- console showcase ---------- */
   .console-tabs{display:flex; gap:2px; border-bottom:1px solid var(--line); margin-bottom:0; flex-wrap:wrap;}
@@ -440,7 +428,6 @@
     .qs-providers{grid-template-columns:repeat(2, 1fr);}
     .resgrid{grid-template-columns:1fr;}
     .navlinks{display:none;}
-    .log-entry{grid-template-columns:1fr; gap:6px;}
   }
 
   :focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
@@ -576,7 +563,7 @@
       <button class="qs-provider" role="tab" id="mod-tab-stream" aria-controls="mod-panel-stream" aria-selected="false" data-module="stream">
         <span class="pmono" aria-hidden="true">ST</span>
         <span class="pname">Stream</span>
-        <span class="pdesc">Moves audits from Kafka or Kinesis into OpenSearch, and archives them to S3.</span>
+        <span class="pdesc">Moves audits from Kafka, Event Hubs or Kinesis into OpenSearch, as they arrive.</span>
         <span class="pstate">Select</span>
       </button>
       <button class="qs-provider" role="tab" id="mod-tab-console" aria-controls="mod-panel-console" aria-selected="false" data-module="console">
@@ -672,11 +659,11 @@
     <!-- ===== Stream ===== -->
     <div class="mod-panel" role="tabpanel" id="mod-panel-stream" aria-labelledby="mod-tab-stream" data-mpanel="stream">
       <div class="mhead"><h3>Kockpit Stream</h3><span class="mpath">kockpit-core-applications/</span></div>
-      <p class="mintro">The applications that carry audits from your services to where they are searched and kept, as they
-      arrive rather than in a batch job.</p>
+      <p class="mintro">The audit stream carries audits from your services into OpenSearch as they arrive, rather than in a
+      batch job. See <a href="#stream" style="color:var(--amber)">how it reads each source</a>.</p>
       <ul class="mod-parts">
-        <li><span class="pname">kockpit-audit-stream</span><span class="pinfo">Reads audits from Kafka or Kinesis (with or without enhanced fan-out) and indexes them into OpenSearch.</span></li>
-        <li><span class="pname">kockpit-kinesis-s3-application</span><span class="pinfo">Reads audits from Kinesis and writes them to S3 for long-term storage.</span></li>
+        <li><span class="pname">kockpit-audit-stream</span><span class="pinfo">Reads audits from Kafka, Event Hubs or Kinesis (with or without enhanced fan-out) and indexes them into OpenSearch; on AWS, archives them to S3 first.</span></li>
+        <li><span class="pname">kockpit-kinesis-s3-application</span><span class="pinfo">Not for audits: bridges feature messages published on Kinesis to the S3 layout the backend reads.</span></li>
         <li><span class="pname">Images</span><span class="pinfo"><code>kockpit-audit-stream-application-kafka</code>, <code>-aws</code> and <code>-aws-efo</code>; <code>kockpit-kinesis-s3-application</code>.</span></li>
       </ul>
     </div>
@@ -1185,7 +1172,7 @@
       <ul class="mod-parts">
         <li><span class="pname">Storage</span><span class="pinfo"><code>kockpit-core-communication-storageaccount</code>, as for Azure.</span></li>
         <li><span class="pname">Backend's own audits</span><span class="pinfo">Sent to Event Hubs, through <code>kockpit-features-audit-starters-eventhub</code>.</span></li>
-        <li><span class="pname">Audit stream</span><span class="pinfo">No Event Hubs-specific image ships: the audit stream images are for Kafka and Kinesis.</span></li>
+        <li><span class="pname">Audit stream</span><span class="pinfo">The Kafka image with the <code>eventhub</code> Spring profile, on Event Hubs' Kafka endpoint.</span></li>
         <li><span class="pname">Maven profile</span><span class="pinfo"><code>azure-eventhub</code>.</span></li>
       </ul>
     </div>
@@ -1194,7 +1181,7 @@
     <div class="mod-panel" role="tabpanel" id="arch-panel-aws" aria-labelledby="arch-tab-aws" data-mpanel="aws">
       <div class="mhead"><h3>AWS</h3><span class="mpath">kockpit-backend-application-aws</span></div>
       <p class="mintro">Feature messages and manifests on S3, audits on Kinesis, and Amazon OpenSearch Service with
-      signed requests. Kinesis can also feed an S3 archive of every audit.</p>
+      signed requests. The audit stream archives every batch of audits to S3 before indexing it.</p>
       <div class="flow" aria-label="How the AWS backend is wired">
         <div class="lane"><span class="lname">Audits</span>
           <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
@@ -1204,9 +1191,9 @@
           <span class="node">Backend</span><span class="arrow" aria-hidden="true">←</span>
           <span class="node">Console</span></div>
         <div class="lane"><span class="lname">Archive</span>
-          <span class="node hl">Kinesis</span><span class="arrow" aria-hidden="true">→</span>
-          <span class="node">Kinesis to S3</span><span class="arrow" aria-hidden="true">→</span>
-          <span class="node">S3</span></div>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">S3 archive</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span></div>
         <div class="lane"><span class="lname">Features</span>
           <span class="node">Your services</span><span class="arrow" aria-hidden="true">⇄</span>
           <span class="node hl">S3</span><span class="arrow" aria-hidden="true">⇄</span>
@@ -1217,7 +1204,8 @@
         <li><span class="pname">Storage</span><span class="pinfo"><code>kockpit-core-communication-s3</code> for feature messages, manifests on S3.</span></li>
         <li><span class="pname">Legacy messages</span><span class="pinfo"><code>kockpit-core-communication-legacy</code> keeps applications on the older S3 message format working.</span></li>
         <li><span class="pname">Audit stream</span><span class="pinfo"><code>kockpit-audit-stream-application-aws</code>, or <code>-aws-efo</code> for Kinesis enhanced fan-out.</span></li>
-        <li><span class="pname">Archive</span><span class="pinfo"><code>kockpit-kinesis-s3-application</code> writes the audits to S3 for long-term storage.</span></li>
+        <li><span class="pname">Archive</span><span class="pinfo">Batches of audits on the <code>audits-&lt;env&gt;</code> bucket; each indexed audit points to its S3 object.</span></li>
+        <li><span class="pname">Kinesis to S3</span><span class="pinfo"><code>kockpit-kinesis-s3-application</code> bridges feature messages published on Kinesis to the S3 layout the backend reads.</span></li>
         <li><span class="pname">Backend's own audits</span><span class="pinfo">Sent to Kinesis, through <code>kockpit-audit-notification-kinesis</code>.</span></li>
         <li><span class="pname">OpenSearch</span><span class="pinfo">Requests signed by <code>kockpit-aws-opensearch-request-signing</code>.</span></li>
         <li><span class="pname">Maven profile</span><span class="pinfo"><code>aws</code>.</span></li>
@@ -1227,25 +1215,138 @@
   </div>
 </section>
 
-<section class="log border-top">
+<section id="stream" class="border-top">
   <div class="wrap">
     <div class="section-head">
       <div class="kicker"><span class="led on"></span> Stream processing</div>
       <h2>Audits arrive as a stream, not a batch job you run later.</h2>
+      <p>The audit stream reads audits off your broker and indexes them into OpenSearch as they arrive, in batches.
+      One application, built per source; pick a source to see how it reads.</p>
     </div>
-    <div class="log-entry">
-      <div class="tstamp">kafka</div>
-      <div>
-        <h4>kockpit-audit-stream-application-kafka</h4>
-        <p>Reads audits off a Kafka broker and indexes them into an OpenSearch cluster as they arrive.</p>
-      </div>
+
+    <div class="mod-thumbs qs-providers" role="tablist" aria-label="Choose an audit source">
+      <button class="qs-provider" role="tab" id="stream-tab-kafka" aria-controls="stream-panel-kafka" aria-selected="true" data-module="kafka">
+        <span class="pmono" aria-hidden="true">KF</span>
+        <span class="pname">Kafka</span>
+        <span class="pdesc">A Kafka topic, read by a consumer group. The default.</span>
+        <span class="pstate">Selected</span>
+      </button>
+      <button class="qs-provider" role="tab" id="stream-tab-eh" aria-controls="stream-panel-eh" aria-selected="false" data-module="eh">
+        <span class="pmono" aria-hidden="true">EH</span>
+        <span class="pname">Azure Event Hubs</span>
+        <span class="pdesc">The Kafka image, on Event Hubs' Kafka endpoint.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="stream-tab-kinesis" aria-controls="stream-panel-kinesis" aria-selected="false" data-module="kinesis">
+        <span class="pmono" aria-hidden="true">KN</span>
+        <span class="pname">Kinesis</span>
+        <span class="pdesc">A Kinesis stream, shards shared through DynamoDB leases, archived to S3.</span>
+        <span class="pstate">Select</span>
+      </button>
+      <button class="qs-provider" role="tab" id="stream-tab-efo" aria-controls="stream-panel-efo" aria-selected="false" data-module="efo">
+        <span class="pmono" aria-hidden="true">EFO</span>
+        <span class="pname">Kinesis EFO</span>
+        <span class="pdesc">Kinesis with enhanced fan-out: records pushed, with their own throughput.</span>
+        <span class="pstate">Select</span>
+      </button>
     </div>
-    <div class="log-entry">
-      <div class="tstamp">kinesis</div>
-      <div>
-        <h4>kockpit-audit-stream-application-kinesis</h4>
-        <p>Same role, sourced from Kinesis for teams already standardized on the AWS streaming stack.</p>
+
+    <!-- ===== Kafka ===== -->
+    <div class="mod-panel active" role="tabpanel" id="stream-panel-kafka" aria-labelledby="stream-tab-kafka" data-mpanel="kafka">
+      <div class="mhead"><h3>Kafka</h3><span class="mpath">kockpit-audit-stream-application-kafka</span></div>
+      <p class="mintro">Your services publish their audits on a Kafka topic; the audit stream consumes it and indexes
+      every batch into OpenSearch.</p>
+      <div class="flow" aria-label="How the Kafka audit stream reads">
+        <div class="lane"><span class="lname">Audits</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">Kafka topic</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Backend</span></div>
       </div>
+      <ul class="mod-parts">
+        <li><span class="pname">Source</span><span class="pinfo">The <code>audits</code> topic by default (<code>kockpit.audit.stream.kafka.topics</code>).</span></li>
+        <li><span class="pname">Scaling</span><span class="pinfo">A consumer group named after the application: run more instances to share the partitions.</span></li>
+        <li><span class="pname">Starters</span><span class="pinfo"><code>kockpit-audit-stream-starter-kafka</code> and <code>-starter-opensearch</code>.</span></li>
+        <li><span class="pname">Maven profile</span><span class="pinfo"><code>kafka</code>, active by default.</span></li>
+        <li><span class="pname">Try it</span><span class="pinfo">The <a href="#quickstart">Kafka</a>, <a href="#quickstart">Azure</a> and <a href="#quickstart">Kubernetes</a> quick starts.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Event Hubs ===== -->
+    <div class="mod-panel" role="tabpanel" id="stream-panel-eh" aria-labelledby="stream-tab-eh" data-mpanel="eh">
+      <div class="mhead"><h3>Azure Event Hubs</h3><span class="mpath">kockpit-audit-stream-application-kafka</span></div>
+      <p class="mintro">Event Hubs exposes a Kafka endpoint, so the Kafka image reads it as is: the <code>eventhub</code>
+      Spring profile only switches the Kafka client to SASL_SSL.</p>
+      <div class="flow" aria-label="How the audit stream reads Event Hubs">
+        <div class="lane"><span class="lname">Audits</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">Event Hubs</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Backend</span></div>
+      </div>
+      <ul class="mod-parts">
+        <li><span class="pname">Image</span><span class="pinfo">The Kafka image, with <code>SPRING_PROFILES_ACTIVE=eventhub</code>.</span></li>
+        <li><span class="pname">Connection</span><span class="pinfo"><code>BOOTSTRAP_SERVERS</code> on the namespace's Kafka endpoint, and the SASL login (with the connection string) in <code>SASL_JAAS_CONFIG</code>.</span></li>
+        <li><span class="pname">Producers</span><span class="pinfo">Services can publish through Kafka, or through the native client (<code>kockpit-features-audit-starters-eventhub</code>).</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Kinesis ===== -->
+    <div class="mod-panel" role="tabpanel" id="stream-panel-kinesis" aria-labelledby="stream-tab-kinesis" data-mpanel="kinesis">
+      <div class="mhead"><h3>Kinesis</h3><span class="mpath">kockpit-audit-stream-application-aws</span></div>
+      <p class="mintro">The AWS build reads a Kinesis stream and, before indexing, archives every batch of audits to S3:
+      each indexed audit keeps a pointer to its S3 object.</p>
+      <div class="flow" aria-label="How the Kinesis audit stream reads">
+        <div class="lane"><span class="lname">Audits</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">Kinesis stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">S3 archive</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Backend</span></div>
+      </div>
+      <ul class="mod-parts">
+        <li><span class="pname">Source</span><span class="pinfo"><code>KINESIS_STREAM_NAME</code>; shards are shared between instances through leases in DynamoDB.</span></li>
+        <li><span class="pname">Archive</span><span class="pinfo">Batches of audits on the <code>audits-&lt;env&gt;</code> bucket; the index keeps each audit's S3 URI, offset and size.</span></li>
+        <li><span class="pname">Already offloaded</span><span class="pinfo">Audits a producer has already written to S3 are indexed as they are, with their own S3 key.</span></li>
+        <li><span class="pname">OpenSearch</span><span class="pinfo">Amazon OpenSearch Service, with signed requests.</span></li>
+        <li><span class="pname">Maven profile</span><span class="pinfo"><code>aws</code>.</span></li>
+        <li><span class="pname">Try it</span><span class="pinfo">The <a href="#quickstart">AWS</a> quick start, with LocalStack.</span></li>
+      </ul>
+    </div>
+
+    <!-- ===== Kinesis EFO ===== -->
+    <div class="mod-panel" role="tabpanel" id="stream-panel-efo" aria-labelledby="stream-tab-efo" data-mpanel="efo">
+      <div class="mhead"><h3>Kinesis enhanced fan-out</h3><span class="mpath">kockpit-audit-stream-application-aws-efo</span></div>
+      <p class="mintro">The same AWS build, registered as an enhanced fan-out consumer: Kinesis pushes the records to it,
+      with throughput of its own instead of sharing the stream's read limit with other consumers.</p>
+      <div class="flow" aria-label="How the Kinesis EFO audit stream reads">
+        <div class="lane"><span class="lname">Audits</span>
+          <span class="node">Your services</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node hl">Kinesis EFO</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">Audit stream</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">S3 archive</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="node">OpenSearch</span><span class="arrow" aria-hidden="true">←</span>
+          <span class="node">Backend</span></div>
+      </div>
+      <ul class="mod-parts">
+        <li><span class="pname">Consumer</span><span class="pinfo">Registered as <code>KINESIS_CONSUMER_NAME</code>, the application name by default.</span></li>
+        <li><span class="pname">Archive and index</span><span class="pinfo">As for Kinesis: S3 first, then OpenSearch with the S3 pointer.</span></li>
+        <li><span class="pname">Starters</span><span class="pinfo"><code>kockpit-audit-stream-starter-kinesis-efo</code> and <code>-starter-opensearch-s3</code>.</span></li>
+        <li><span class="pname">Maven profile</span><span class="pinfo"><code>aws-efo</code>.</span></li>
+      </ul>
+    </div>
+
+    <div class="mod-panel active stream-common">
+      <div class="mhead"><h3>Indexing, for every source</h3><span class="mpath">kockpit-audit-stream-starter-opensearch</span></div>
+      <ul class="mod-parts">
+        <li><span class="pname">Daily indices</span><span class="pinfo">One index per domain, environment and retention, rotated every day: <code>&lt;domain&gt;-&lt;index&gt;-&lt;env&gt;-ttl&lt;N&gt;d-&lt;date&gt;-00001</code>.</span></li>
+        <li><span class="pname">Retention</span><span class="pinfo">Each audit carries a TTL in days (5 by default); an ISM policy deletes its index once it is older than that.</span></li>
+        <li><span class="pname">Read alias</span><span class="pinfo"><code>&lt;domain&gt;-&lt;index&gt;-&lt;env&gt;-read</code> spans every index of an environment: that is what the backend searches.</span></li>
+        <li><span class="pname">Write aliases</span><span class="pinfo">One per retention, moved to the new index each day. Writes require the alias, so a missing one fails and is retried instead of creating a stray index.</span></li>
+      </ul>
     </div>
   </div>
 </section>
@@ -1546,8 +1647,8 @@
     });
   });
 
-  // what it is, capabilities, architecture: thumbnails with a detail panel, same behaviour as the quick start provider cards
-  ['#what', '#capabilities', '#architecture'].forEach(function(section){
+  // what it is, capabilities, architecture, stream: thumbnails with a detail panel, same behaviour as the quick start provider cards
+  ['#what', '#capabilities', '#architecture', '#stream'].forEach(function(section){
   document.querySelectorAll(section + ' .qs-provider').forEach(function(card){
     card.addEventListener('click', function(){
       var target = card.getAttribute('data-module');
@@ -1556,7 +1657,7 @@
         c.setAttribute('aria-selected', selected ? 'true' : 'false');
         c.querySelector('.pstate').textContent = selected ? 'Selected' : 'Select';
       });
-      document.querySelectorAll(section + ' .mod-panel').forEach(function(p){
+      document.querySelectorAll(section + ' .mod-panel[data-mpanel]').forEach(function(p){
         p.classList.toggle('active', p.getAttribute('data-mpanel') === target);
       });
     });
