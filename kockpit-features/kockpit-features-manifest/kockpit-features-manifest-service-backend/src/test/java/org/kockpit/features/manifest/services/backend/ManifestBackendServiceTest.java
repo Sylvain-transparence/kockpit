@@ -97,7 +97,7 @@ class ManifestBackendServiceTest {
     }
 
     private static ManifestDto manifest(String name) {
-        return ManifestDto.builder().name(name).domain("wcplatform").env("dev").build();
+        return ManifestDto.builder().name(name).domain("platform").env("dev").build();
     }
 
     static class CountingRepository implements ManifestBackendRepository {

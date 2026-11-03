@@ -21,9 +21,9 @@ class HealthLegacyMapperTest {
                 .messageId("6f1c0a8e-1d3b-4c7a-9f21-8a4e5b6c7d80")
                 .internalType("BROADCAST")
                 .serviceId("heartbeat")
-                .domain("wcplatform")
+                .domain("platform")
                 .env("dev")
-                .applicationId("wcpsamples")
+                .applicationId("samples")
                 .message(InstanceInitPropertiesUpdateRequestDto.builder()
                         .updates(List.of(PropertyUpdateMessageRequestDto.builder()
                                 .propertyName("instance.status")
@@ -39,9 +39,9 @@ class HealthLegacyMapperTest {
         Message message = mapper.toMessage(legacyMessage());
 
         assertThat(message.getId()).isEqualTo("6f1c0a8e-1d3b-4c7a-9f21-8a4e5b6c7d80");
-        assertThat(message.getDomain()).isEqualTo("wcplatform");
+        assertThat(message.getDomain()).isEqualTo("platform");
         assertThat(message.getEnv()).isEqualTo("dev");
-        assertThat(message.getAppId()).isEqualTo("wcpsamples");
+        assertThat(message.getAppId()).isEqualTo("samples");
     }
 
     /**

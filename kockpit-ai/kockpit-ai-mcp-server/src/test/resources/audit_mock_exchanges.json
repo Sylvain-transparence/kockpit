@@ -1,5 +1,5 @@
 {
-  "domain": "rcu",
+  "domain": "kockpit",
   "env": "bch",
   "appId": "offers-engine",
   "version": "1.0.0",

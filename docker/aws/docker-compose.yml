@@ -3,7 +3,7 @@ services:
     container_name: localstack_console_services
     image: localstack/localstack:2026.10.0
     healthcheck:
-      test: [ "CMD", "awslocal", "s3api", "wait", "bucket-exists", "--bucket", "wcp-manifest-bucket" ]
+      test: [ "CMD", "awslocal", "s3api", "wait", "bucket-exists", "--bucket", "kockpit-manifest-bucket" ]
       interval: 15s
       timeout: 10s
       retries: 10

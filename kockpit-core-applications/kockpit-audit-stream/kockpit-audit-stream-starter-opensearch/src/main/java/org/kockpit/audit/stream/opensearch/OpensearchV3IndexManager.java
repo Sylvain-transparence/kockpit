@@ -288,7 +288,7 @@ public class OpensearchV3IndexManager {
         // failure on the add (after the remove already succeeded) left the alias attached
         // nowhere - and the next bulk write to that alias name got silently "fixed" by
         // OpenSearch's dynamic index auto-creation, permanently poisoning the alias with a real,
-        // unmanaged index (this is what happened to rcu-audit-data-pro-ttl30d-write in prod).
+        // unmanaged index (this happened to a -write alias in production).
         // Atomic means a failure here leaves the alias on the OLD index, which is safe: writes
         // keep flowing correctly, just to yesterday's index, until the next successful retry.
         UpdateAliasesRequest request = UpdateAliasesRequest.of(u -> u

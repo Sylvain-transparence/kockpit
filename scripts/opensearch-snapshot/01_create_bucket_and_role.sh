@@ -2,14 +2,14 @@
 # Step 1 - AWS side: an S3 bucket for manual OpenSearch snapshots, and the IAM role the
 # OpenSearch service assumes to write into it. Control-plane only, runs from anywhere.
 #
-#   AWS_PROFILE=accor-pro ./01_create_bucket_and_role.sh
+#   AWS_PROFILE=my-aws-profile ACCOUNT_ID=123456789012 DOMAIN_NAME=my-opensearch-domain ./01_create_bucket_and_role.sh
 #
 # Idempotent: existing bucket/role are kept, the role's policies are (re)applied.
 set -euo pipefail
 
-ACCOUNT_ID="${ACCOUNT_ID:-531436091006}"
+ACCOUNT_ID="${ACCOUNT_ID:?set ACCOUNT_ID to the AWS account id}"
 REGION="${REGION:-eu-west-1}"
-DOMAIN_NAME="${DOMAIN_NAME:-wcp-pro-opk-domain}"
+DOMAIN_NAME="${DOMAIN_NAME:?set DOMAIN_NAME to the OpenSearch domain name}"
 BUCKET="${BUCKET:-kockpit-os-snapshots-pro-${ACCOUNT_ID}}"
 ROLE_NAME="${ROLE_NAME:-kockpit-opensearch-snapshot-pro}"
 

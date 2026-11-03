@@ -52,7 +52,7 @@ module "manifest" {
   audit_services = [
     {
       name    = "Samples Audits"
-      id      = "wcpsamples"
+      id      = "samples"
       columns = ["appId", "requestId", "method", "path", "duration", "start", "status"]
       # only the audits of these applications (omit to show every application of the domain/env)
       app_ids = ["kockpit-app-1", "kockpit-app-2"]

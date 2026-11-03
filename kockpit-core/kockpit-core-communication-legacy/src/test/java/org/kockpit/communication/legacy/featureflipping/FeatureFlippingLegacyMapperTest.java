@@ -22,7 +22,7 @@ class FeatureFlippingLegacyMapperTest {
         Message message = Message.builder()
                 .id("550e8400-e29b-41d4-a716-446655440000")
                 .service("feature-flipping")
-                .domain("accor")
+                .domain("example")
                 .env("prod")
                 .appId("my-app")
                 .keyValues(List.of(new KeyValue("my.feature.enabled", "true")))
@@ -33,7 +33,7 @@ class FeatureFlippingLegacyMapperTest {
         assertThat(result.getInternalType()).isEqualTo("BROADCAST");
         assertThat(result.getMessageId()).isEqualTo("550e8400-e29b-41d4-a716-446655440000");
         assertThat(result.getServiceId()).isEqualTo("featureflipping");
-        assertThat(result.getDomain()).isEqualTo("accor");
+        assertThat(result.getDomain()).isEqualTo("example");
         assertThat(result.getEnv()).isEqualTo("prod");
         assertThat(result.getApplicationId()).isEqualTo("my-app");
 
@@ -51,7 +51,7 @@ class FeatureFlippingLegacyMapperTest {
         Message message = Message.builder()
                 .id("550e8400-e29b-41d4-a716-446655440000")
                 .service("feature-flipping")
-                .domain("accor")
+                .domain("example")
                 .env("prod")
                 .appId("my-app")
                 .keyValues(List.of(new KeyValue("my.feature.enabled", "true")))
@@ -64,7 +64,7 @@ class FeatureFlippingLegacyMapperTest {
                   "internalType": "BROADCAST",
                   "messageId": "550e8400-e29b-41d4-a716-446655440000",
                   "serviceId": "featureflipping",
-                  "domain": "accor",
+                  "domain": "example",
                   "env": "prod",
                   "applicationId": "my-app",
                   "message": {

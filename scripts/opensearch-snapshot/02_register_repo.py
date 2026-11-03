@@ -9,9 +9,10 @@ iam:PassRole that role. This script signs it with your AWS CLI credentials (no e
 It works through an SSM tunnel: it connects to --host (e.g. https://localhost:9200) but signs
 for, and sends Host: <--endpoint-host>, which is what the domain checks the signature against.
 
-  ./02_register_repo.py --host https://localhost:9200 --insecure --profile accor-pro \\
-      --bucket kockpit-os-snapshots-pro-531436091006 \\
-      --role-arn arn:aws:iam::531436091006:role/kockpit-opensearch-snapshot-pro
+  ./02_register_repo.py --host https://localhost:9200 --insecure --profile my-aws-profile \\
+      --endpoint-host vpc-my-domain-xxxxxxxxxxxx.eu-west-1.es.amazonaws.com \\
+      --bucket kockpit-os-snapshots-pro-123456789012 \\
+      --role-arn arn:aws:iam::123456789012:role/kockpit-opensearch-snapshot-pro
 """
 import argparse
 import datetime
@@ -25,7 +26,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-DEFAULT_ENDPOINT = "vpc-wcp-pro-opk-domain-kdxpfylvr3c4pn5imfdlkuvtki.eu-west-1.es.amazonaws.com"
 
 
 def _hmac(key, msg):
@@ -98,14 +98,15 @@ def call(args, creds, method, path, body=None, query=None):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--host", required=True, help="Where to connect, e.g. https://localhost:9200 (tunnel)")
-    p.add_argument("--endpoint-host", default=DEFAULT_ENDPOINT,
-                   help="The domain's real endpoint host name, used for signing (default: %(default)s)")
+    p.add_argument("--endpoint-host", required=True,
+                   help="The domain's real endpoint host name, used for signing, "
+                        "e.g. vpc-my-domain-xxxxxxxxxxxx.eu-west-1.es.amazonaws.com")
     p.add_argument("--insecure", action="store_true", help="Skip TLS verification (needed through a tunnel)")
-    p.add_argument("--profile", help="AWS CLI profile, e.g. accor-pro")
+    p.add_argument("--profile", help="AWS CLI profile, e.g. my-aws-profile")
     p.add_argument("--region", default="eu-west-1")
-    p.add_argument("--repository", default="wcbno-archive")
+    p.add_argument("--repository", default="orders-archive")
     p.add_argument("--bucket", required=True)
-    p.add_argument("--base-path", default="wcbno-auditdata", help="Key prefix inside the bucket")
+    p.add_argument("--base-path", default="orders-auditdata", help="Key prefix inside the bucket")
     p.add_argument("--role-arn", required=True)
     args = p.parse_args()
 

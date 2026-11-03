@@ -14,8 +14,8 @@ class ManifestAccessTest {
     // Top-level groups only (manifest "example 1").
     private static final ManifestDto GROUPS_ONLY = ManifestReader.read("""
             {
-              "domain": "wcxss", "env": "dev",
-              "groups": ["ACCOR-WCPConsole-WCXSSTeam"],
+              "domain": "insurance", "env": "dev",
+              "groups": ["KOCKPIT-Console-InsuranceTeam"],
               "policies": null,
               "services": [ { "type": "audit", "name": "a", "id": "a" } ]
             }
@@ -24,23 +24,23 @@ class ManifestAccessTest {
     // Policies only, "type:*" resources and empty permissions (manifest "example 2").
     private static final ManifestDto POLICIES_ONLY = ManifestReader.read("""
             {
-              "domain": "wcoff", "env": "review-mr-1551",
+              "domain": "offers", "env": "review-mr-1551",
               "groups": null,
               "policies": [
-                {"groups":["ACCOR-WCPConsole-QaNGATeam","ACCOR-WCPConsole-QaNGATeam-Managed"],"permissions":[],"resources":["audit:*"]},
-                {"groups":["ACCOR-WCPConsole-WCOFFTeam"],"permissions":[],"resources":["audit:*","cache:*","dynaconfig:*","featureflipping:*","sqsdlq:*"]}
+                {"groups":["KOCKPIT-Console-QaTeam","KOCKPIT-Console-QaTeam-Managed"],"permissions":[],"resources":["audit:*"]},
+                {"groups":["KOCKPIT-Console-OffersTeam"],"permissions":[],"resources":["audit:*","cache:*","dynaconfig:*","featureflipping:*","sqsdlq:*"]}
               ],
               "services": [ { "type": "audit", "name": "offers-api", "id": "offers-api" } ]
             }
             """.getBytes(StandardCharsets.UTF_8));
 
     private static final ManifestDto UNRESTRICTED = ManifestReader.read("""
-            { "domain": "wcc", "env": "dev", "services": [ { "type": "audit", "name": "a", "id": "a" } ] }
+            { "domain": "messaging", "env": "dev", "services": [ { "type": "audit", "name": "a", "id": "a" } ] }
             """.getBytes(StandardCharsets.UTF_8));
 
     @Test
     void a_member_of_the_manifest_groups_sees_everything() {
-        Set<String> user = Set.of("ACCOR-WCPConsole-WCXSSTeam");
+        Set<String> user = Set.of("KOCKPIT-Console-InsuranceTeam");
 
         assertThat(ManifestAccess.canSee(GROUPS_ONLY, user)).isTrue();
         assertThat(ManifestAccess.visibleTo(GROUPS_ONLY, user).getServices()).hasSize(1);
@@ -49,7 +49,7 @@ class ManifestAccessTest {
 
     @Test
     void a_non_member_does_not_see_a_groups_only_manifest() {
-        Set<String> user = Set.of("ACCOR-WCPConsole-WBNO-ReadOnly");
+        Set<String> user = Set.of("KOCKPIT-Console-ReadOnly");
 
         assertThat(ManifestAccess.canSee(GROUPS_ONLY, user)).isFalse();
         assertThat(ManifestAccess.canAccess(GROUPS_ONLY, user, "audit", null)).isFalse();
@@ -57,18 +57,18 @@ class ManifestAccessTest {
 
     @Test
     void policies_grant_by_type_wildcard_even_with_empty_permissions() {
-        Set<String> wcoff = Set.of("ACCOR-WCPConsole-WCOFFTeam");
+        Set<String> offers = Set.of("KOCKPIT-Console-OffersTeam");
 
-        assertThat(ManifestAccess.canSee(POLICIES_ONLY, wcoff)).isTrue();
-        assertThat(ManifestAccess.visibleTo(POLICIES_ONLY, wcoff).getServices())
+        assertThat(ManifestAccess.canSee(POLICIES_ONLY, offers)).isTrue();
+        assertThat(ManifestAccess.visibleTo(POLICIES_ONLY, offers).getServices())
                 .extracting(ServiceDto::getId).containsExactly("offers-api");
-        assertThat(ManifestAccess.canAccess(POLICIES_ONLY, wcoff, "cache", "currenciesCache")).isTrue();
-        assertThat(ManifestAccess.canAccess(POLICIES_ONLY, wcoff, "audit", null)).isTrue();
+        assertThat(ManifestAccess.canAccess(POLICIES_ONLY, offers, "cache", "currenciesCache")).isTrue();
+        assertThat(ManifestAccess.canAccess(POLICIES_ONLY, offers, "audit", null)).isTrue();
     }
 
     @Test
     void a_policy_only_grants_its_own_resources() {
-        Set<String> qa = Set.of("ACCOR-WCPConsole-QaNGATeam-Managed");
+        Set<String> qa = Set.of("KOCKPIT-Console-QaTeam-Managed");
 
         assertThat(ManifestAccess.canSee(POLICIES_ONLY, qa)).isTrue();
         assertThat(ManifestAccess.canAccess(POLICIES_ONLY, qa, "audit", "offers-api")).isTrue();
@@ -78,7 +78,7 @@ class ManifestAccessTest {
 
     @Test
     void a_user_in_no_policy_sees_nothing() {
-        Set<String> other = Set.of("ACCOR-WCPConsole-WBNO-ReadOnly");
+        Set<String> other = Set.of("KOCKPIT-Console-ReadOnly");
 
         assertThat(ManifestAccess.canSee(POLICIES_ONLY, other)).isFalse();
         assertThat(ManifestAccess.visibleTo(POLICIES_ONLY, other).getServices()).isEmpty();
@@ -89,7 +89,7 @@ class ManifestAccessTest {
     void a_specific_resource_grants_only_that_service() {
         ManifestDto manifest = ManifestReader.read("""
                 {
-                  "domain": "wcoff", "env": "pro",
+                  "domain": "offers", "env": "pro",
                   "policies": [ {"groups":["team"],"permissions":[],"resources":["audit:offers-api"]} ],
                   "services": [ { "type": "audit", "name": "offers-api", "id": "offers-api" },
                                 { "type": "audit", "name": "other-api", "id": "other-api" } ]
@@ -107,7 +107,7 @@ class ManifestAccessTest {
     void legacy_permissions_without_resources_grant_the_whole_type() {
         ManifestDto manifest = ManifestReader.read("""
                 {
-                  "domain": "wcbno", "env": "dev",
+                  "domain": "orders", "env": "dev",
                   "policies": [ { "groups": ["team"], "permissions": ["audit:read"], "resources": [] } ],
                   "services": [ { "type": "audit", "name": "a", "id": "a" } ]
                 }
@@ -128,15 +128,15 @@ class ManifestAccessTest {
     void top_level_groups_survive_the_legacy_applications_conversion() {
         ManifestDto legacy = ManifestReader.read("""
                 {
-                  "domain": "wcoff", "env": "review-mr-1299",
-                  "groups": ["ACCOR-WCPConsole-WCOFFTeam"],
+                  "domain": "offers", "env": "review-mr-1299",
+                  "groups": ["KOCKPIT-Console-OffersTeam"],
                   "applications": [ { "id": "offers-api", "services": { "audit": [ { "name": "offers-api" } ] } } ]
                 }
                 """.getBytes(StandardCharsets.UTF_8));
 
-        assertThat(legacy.getGroups()).containsExactly("ACCOR-WCPConsole-WCOFFTeam");
-        assertThat(ManifestAccess.canSee(legacy, Set.of("ACCOR-WCPConsole-WBNO-ReadOnly"))).isFalse();
-        assertThat(ManifestAccess.canSee(legacy, Set.of("ACCOR-WCPConsole-WCOFFTeam"))).isTrue();
+        assertThat(legacy.getGroups()).containsExactly("KOCKPIT-Console-OffersTeam");
+        assertThat(ManifestAccess.canSee(legacy, Set.of("KOCKPIT-Console-ReadOnly"))).isFalse();
+        assertThat(ManifestAccess.canSee(legacy, Set.of("KOCKPIT-Console-OffersTeam"))).isTrue();
     }
 
     @Test
@@ -145,11 +145,11 @@ class ManifestAccessTest {
         // (id = name), the other types are still reachable through the API and checked by type.
         ManifestDto legacy = ManifestReader.read("""
                 {
-                  "domain": "wcoff", "env": "review-mr-1551",
+                  "domain": "offers", "env": "review-mr-1551",
                   "groups": null,
                   "policies": [
-                    {"groups":["ACCOR-WCPConsole-QaNGATeam"],"permissions":[],"resources":["audit:offers-api"]},
-                    {"groups":["ACCOR-WCPConsole-WCOFFTeam"],"permissions":[],"resources":["audit:*","cache:*"]}
+                    {"groups":["KOCKPIT-Console-QaTeam"],"permissions":[],"resources":["audit:offers-api"]},
+                    {"groups":["KOCKPIT-Console-OffersTeam"],"permissions":[],"resources":["audit:*","cache:*"]}
                   ],
                   "applications": [
                     { "id": "offers-api", "services": {
@@ -158,43 +158,43 @@ class ManifestAccessTest {
                   ]
                 }
                 """.getBytes(StandardCharsets.UTF_8));
-        Set<String> qa = Set.of("ACCOR-WCPConsole-QaNGATeam");
-        Set<String> wcoff = Set.of("ACCOR-WCPConsole-WCOFFTeam");
+        Set<String> qa = Set.of("KOCKPIT-Console-QaTeam");
+        Set<String> offers = Set.of("KOCKPIT-Console-OffersTeam");
 
         assertThat(legacy.getPolicies()).hasSize(2);
         assertThat(ManifestAccess.visibleTo(legacy, qa).getServices())
                 .extracting(ServiceDto::getId).containsExactly("offers-api");
-        assertThat(ManifestAccess.visibleTo(legacy, wcoff).getServices())
+        assertThat(ManifestAccess.visibleTo(legacy, offers).getServices())
                 .extracting(ServiceDto::getId).containsExactly("offers-api", "offers-business-api");
         assertThat(ManifestAccess.canAccess(legacy, qa, "cache", "currenciesCache")).isFalse();
-        assertThat(ManifestAccess.canAccess(legacy, wcoff, "cache", "currenciesCache")).isTrue();
-        assertThat(ManifestAccess.canSee(legacy, Set.of("ACCOR-WCPConsole-WBNO-ReadOnly"))).isFalse();
+        assertThat(ManifestAccess.canAccess(legacy, offers, "cache", "currenciesCache")).isTrue();
+        assertThat(ManifestAccess.canSee(legacy, Set.of("KOCKPIT-Console-ReadOnly"))).isFalse();
     }
 
     @Test
     void a_wildcard_policy_group_grants_its_resources_to_every_user() {
-        // wcplatform-wcpsamples-manifest-dev.json: admins get everything, everyone gets the audits.
+        // platform-samples-manifest-dev.json: admins get everything, everyone gets the audits.
         ManifestDto legacy = ManifestReader.read("""
                 {
-                  "domain": "wcplatform", "env": "dev",
+                  "domain": "platform", "env": "dev",
                   "groups": null,
                   "policies": [
                     {"groups":["AAD-B2-AWS-531583874639-Admin"],"permissions":[],"resources":["audit:*","cache:*","dynaconfig:*","featureflipping:*"]},
                     {"groups":["*"],"permissions":[],"resources":["audit:*"]}
                   ],
                   "applications": [
-                    { "id": "wcpsamples", "services": {
-                        "audit": [ { "name": "wcpsamples" } ],
+                    { "id": "samples", "services": {
+                        "audit": [ { "name": "samples" } ],
                         "cache": [ { "name": "SamplesInfo" } ] } }
                   ]
                 }
                 """.getBytes(StandardCharsets.UTF_8));
-        Set<String> anyone = Set.of("ACCOR-WCPConsole-WBNO-ReadOnly");
+        Set<String> anyone = Set.of("KOCKPIT-Console-ReadOnly");
 
         assertThat(ManifestAccess.canSee(legacy, anyone)).isTrue();
         assertThat(ManifestAccess.visibleTo(legacy, anyone).getServices())
-                .extracting(ServiceDto::getId).containsExactly("wcpsamples");
-        assertThat(ManifestAccess.canAccess(legacy, anyone, "audit", "wcpsamples")).isTrue();
+                .extracting(ServiceDto::getId).containsExactly("samples");
+        assertThat(ManifestAccess.canAccess(legacy, anyone, "audit", "samples")).isTrue();
         assertThat(ManifestAccess.canAccess(legacy, anyone, "cache", "SamplesInfo")).isFalse();
         assertThat(ManifestAccess.canAccess(legacy, Set.of(), "audit", null)).isTrue();
         assertThat(ManifestAccess.canAccess(legacy, Set.of("AAD-B2-AWS-531583874639-Admin"), "cache", "SamplesInfo")).isTrue();
@@ -203,7 +203,7 @@ class ManifestAccessTest {
     @Test
     void a_wildcard_manifest_group_makes_the_manifest_visible_to_every_user() {
         ManifestDto manifest = ManifestReader.read("""
-                { "domain": "wcc", "env": "dev", "groups": ["*"], "services": [ { "type": "audit", "name": "a", "id": "a" } ] }
+                { "domain": "messaging", "env": "dev", "groups": ["*"], "services": [ { "type": "audit", "name": "a", "id": "a" } ] }
                 """.getBytes(StandardCharsets.UTF_8));
 
         assertThat(ManifestAccess.canSee(manifest, Set.of("whoever"))).isTrue();
@@ -212,25 +212,25 @@ class ManifestAccessTest {
 
     @Test
     void group_names_match_case_insensitively() {
-        Set<String> lowerCase = Set.of("accor-wcpconsole-wcoffteam");
+        Set<String> lowerCase = Set.of("kockpit-console-offersteam");
 
         assertThat(ManifestAccess.canSee(POLICIES_ONLY, lowerCase)).isTrue();
         assertThat(ManifestAccess.canAccess(POLICIES_ONLY, lowerCase, "cache", "currenciesCache")).isTrue();
-        assertThat(ManifestAccess.canSee(GROUPS_ONLY, Set.of("accor-wcpconsole-wcxssteam"))).isTrue();
+        assertThat(ManifestAccess.canSee(GROUPS_ONLY, Set.of("kockpit-console-insuranceteam"))).isTrue();
     }
 
     @Test
     void top_level_groups_apply_to_the_current_format_too() {
         ManifestDto current = ManifestReader.read("""
                 {
-                  "domain": "wcbno", "env": "dev",
-                  "groups": ["ACCOR-WCPConsole-WBNO-ReadOnly"],
-                  "services": [ { "type": "audit", "name": "wcbno-order-api-v1", "id": "wcbno-order-api-v1" } ]
+                  "domain": "orders", "env": "dev",
+                  "groups": ["KOCKPIT-Console-ReadOnly"],
+                  "services": [ { "type": "audit", "name": "orders-api-v1", "id": "orders-api-v1" } ]
                 }
                 """.getBytes(StandardCharsets.UTF_8));
 
-        assertThat(ManifestAccess.canSee(current, Set.of("ACCOR-WCPConsole-WBNO-ReadOnly"))).isTrue();
-        assertThat(ManifestAccess.visibleTo(current, Set.of("ACCOR-WCPConsole-WBNO-ReadOnly")).getServices()).hasSize(1);
-        assertThat(ManifestAccess.canSee(current, Set.of("ACCOR-WCPConsole-WCOFFTeam"))).isFalse();
+        assertThat(ManifestAccess.canSee(current, Set.of("KOCKPIT-Console-ReadOnly"))).isTrue();
+        assertThat(ManifestAccess.visibleTo(current, Set.of("KOCKPIT-Console-ReadOnly")).getServices()).hasSize(1);
+        assertThat(ManifestAccess.canSee(current, Set.of("KOCKPIT-Console-OffersTeam"))).isFalse();
     }
 }

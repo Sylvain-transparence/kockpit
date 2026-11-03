@@ -35,16 +35,16 @@ class CognitoSecurityTest {
     void maps_adgroups_of_a_real_cognito_id_token_to_authorities() {
         // Claims of an actual console ID token (signature replaced by a test key).
         Jwt jwt = decode(token(Map.of(
-                "custom:adgroups", "ACCOR-WCPConsole-WBNO-ReadOnly",
+                "custom:adgroups", "KOCKPIT-Console-ReadOnly",
                 "token_use", "id",
                 "aud", CLIENT_ID,
-                "email", "Mahieddinemehdi.ICHIR@consulting-for.accor.com")));
+                "email", "jane.doe@example.com")));
 
         var authentication = SecurityConfig.toAuthentication(jwt, CognitoGroups.DEFAULT_CLAIMS);
 
         assertThat(authentication.getAuthorities()).extracting(GrantedAuthority::getAuthority)
-                .containsExactly("ACCOR-WCPConsole-WBNO-ReadOnly");
-        assertThat(authentication.getName()).isEqualTo("Mahieddinemehdi.ICHIR@consulting-for.accor.com");
+                .containsExactly("KOCKPIT-Console-ReadOnly");
+        assertThat(authentication.getName()).isEqualTo("jane.doe@example.com");
     }
 
     @Test

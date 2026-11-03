@@ -289,7 +289,7 @@
       },
       "codelangue": "fr",
       "flagAffLois": "LOISIRS",
-      "interlocuteur": "https://all.accor.com",
+      "interlocuteur": "https://www.example.com",
       "resaObsHotel": "",
       "numLieu": 0,
       "longStay": false,
@@ -298,7 +298,7 @@
       "codeTypeReservation": "RA",
       "codeReservation": "RACWEB",
       "nbRoom": 1,
-      "referer": "https://all.accor.com",
+      "referer": "https://www.example.com",
       "ipAddress": "127.0.0.1",
       "produits": [
         {
@@ -437,10 +437,10 @@
         "lastConnectionDate": 1683194988140,
         "applicationData": [
           {
-            "name": "https://all.accor.com",
+            "name": "https://www.example.com",
             "canal": "WEB",
             "userAgent": "PostmanRuntime/7.26.8",
-            "brand": "ACCOR",
+            "brand": "EXAMPLE",
             "hasActiveNotifications": false,
             "lastConnectionDate": 1683194988140
           }

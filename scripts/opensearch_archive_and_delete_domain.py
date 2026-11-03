@@ -16,19 +16,19 @@ Python 3.9+ standard library only. No authentication (plain HTTP endpoint).
 
 Examples:
   # 1. See what would be affected - touches nothing
-  ./opensearch_archive_and_delete_domain.py --host http://localhost:9200 --domain wcbno \\
+  ./opensearch_archive_and_delete_domain.py --host http://localhost:9200 --domain orders \\
       --before "2026-09-30 12:15" --dry-run
 
   # One specific index only
-  ./opensearch_archive_and_delete_domain.py --host http://localhost:9200 --domain wcbno \\
-      --index wcbno-auditdata-pro-ttl30d-2026.09.29-00001 --before "2026-09-30 12:15" --dry-run
+  ./opensearch_archive_and_delete_domain.py --host http://localhost:9200 --domain orders \\
+      --index orders-auditdata-pro-ttl30d-2026.09.29-00001 --before "2026-09-30 12:15" --dry-run
 
   # AWS VPC domain through an SSM tunnel (see --insecure)
-  ./opensearch_archive_and_delete_domain.py --host https://localhost:9200 --insecure --domain wcbno \\
+  ./opensearch_archive_and_delete_domain.py --host https://localhost:9200 --insecure --domain orders \\
       --before "2026-09-30 12:15" --dry-run
 
   # 2. Archive then delete (asks for confirmation before deleting)
-  ./opensearch_archive_and_delete_domain.py --host http://localhost:9200 --domain wcbno \\
+  ./opensearch_archive_and_delete_domain.py --host http://localhost:9200 --domain orders \\
       --before "2026-09-30 12:15"
 
 Restore (per index file):  each line is {"_index", "_id", "_source"}; replay it with _bulk.
@@ -185,7 +185,7 @@ def delete(os_, indices, query, counts, poll_seconds):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--host", required=True, help="OpenSearch URL, e.g. http://10.0.0.1:9200")
-    p.add_argument("--domain", required=True, help="Audit domain, e.g. wcbno")
+    p.add_argument("--domain", required=True, help="Audit domain, e.g. orders")
     p.add_argument("--before", required=True,
                    help='Cutoff, exclusive. Paris time unless an offset is given, e.g. "2026-09-30 12:15"')
     target = p.add_mutually_exclusive_group()

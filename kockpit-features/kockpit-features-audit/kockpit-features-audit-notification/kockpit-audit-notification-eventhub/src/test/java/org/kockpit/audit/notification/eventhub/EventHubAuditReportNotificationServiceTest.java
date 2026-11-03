@@ -30,12 +30,12 @@ class EventHubAuditReportNotificationServiceTest {
     void one_batch_per_domain_env_app_keyed_like_the_kafka_notifier() {
         List<FakeBatch> batches = batches(10);
 
-        service.notify(List.of(report("wcoff", "dev", "offers"), report("wcbno", "pro", "order"), report("wcoff", "dev", "offers")));
+        service.notify(List.of(report("offers", "dev", "offers"), report("orders", "pro", "order"), report("offers", "dev", "offers")));
 
         ArgumentCaptor<CreateBatchOptions> options = ArgumentCaptor.forClass(CreateBatchOptions.class);
         verify(producerClient, times(2)).createBatch(options.capture());
         assertThat(options.getAllValues()).extracting(CreateBatchOptions::getPartitionKey)
-                .containsExactly("wcoff-dev-offers", "wcbno-pro-order");
+                .containsExactly("offers-dev-offers", "orders-pro-order");
         assertThat(batches).extracting(b -> b.events.size()).containsExactly(2, 1);
         verify(producerClient, times(2)).send(any(EventDataBatch.class));
     }
@@ -75,7 +75,7 @@ class EventHubAuditReportNotificationServiceTest {
         batches(10);
         doThrow(new RuntimeException("hub unavailable")).when(producerClient).send(any(EventDataBatch.class));
 
-        assertThatCode(() -> service.notify(List.of(report("wcoff", "dev", "offers"), report("wcbno", "pro", "order"))))
+        assertThatCode(() -> service.notify(List.of(report("offers", "dev", "offers"), report("orders", "pro", "order"))))
                 .doesNotThrowAnyException();
         // A failing key does not prevent the others from being tried.
         verify(producerClient, times(2)).send(any(EventDataBatch.class));

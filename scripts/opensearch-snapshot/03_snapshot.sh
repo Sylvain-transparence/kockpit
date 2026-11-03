@@ -12,9 +12,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 HOST="${HOST:-https://localhost:9200}"
-REPO="${REPO:-wcbno-archive}"
-SNAPSHOT="${SNAPSHOT:-wcbno-before-20260930-1215}"
-INDICES_FILE="${INDICES_FILE:-wcbno_20260930-1215_snapshot.txt}"
+REPO="${REPO:-orders-archive}"
+SNAPSHOT="${SNAPSHOT:-orders-before-20260930-1215}"
+INDICES_FILE="${INDICES_FILE:-orders_20260930-1215_snapshot.txt}"
 CURL=(curl -sk --fail-with-body -m 60 -H 'Content-Type: application/json')
 
 if [[ "${1:-}" != "--status-only" ]]; then
@@ -29,7 +29,7 @@ if [[ "${1:-}" != "--status-only" ]]; then
     \"ignore_unavailable\": false,
     \"include_global_state\": false,
     \"partial\": false,
-    \"metadata\": { \"reason\": \"audit data archived before deletion\", \"domain\": \"${DOMAIN:-wcbno}\", \"before_epoch_ms\": ${CUTOFF_MS:-1790763300000}, \"indices_file\": \"$(basename "$INDICES_FILE")\" }
+    \"metadata\": { \"reason\": \"audit data archived before deletion\", \"domain\": \"${DOMAIN:-orders}\", \"before_epoch_ms\": ${CUTOFF_MS:-1790763300000}, \"indices_file\": \"$(basename "$INDICES_FILE")\" }
   }" || { echo; echo "❌ Could not start the snapshot. If it says another snapshot is running (the hourly automated one), wait a few minutes and re-run."; exit 1; }
   echo
 fi

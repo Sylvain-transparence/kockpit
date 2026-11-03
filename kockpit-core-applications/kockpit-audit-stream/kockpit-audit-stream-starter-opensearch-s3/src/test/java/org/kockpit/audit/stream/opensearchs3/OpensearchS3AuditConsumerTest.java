@@ -44,11 +44,11 @@ class OpensearchS3AuditConsumerTest {
     void indexes_already_offloaded_report_directly() {
         AuditReport report = new AuditReport();
         report.setId("evt-1");
-        report.setDomain("rcu");
+        report.setDomain("kockpit");
         report.setEnv("prod");
         report.setTtl(30);
-        report.setS3Uri("s3://audits-prod/rcu/2026/09/03/existing.batch");
-        report.setS3Key("rcu/2026/09/03/existing.batch");
+        report.setS3Uri("s3://audits-prod/sample/2026/09/03/existing.batch");
+        report.setS3Key("sample/2026/09/03/existing.batch");
         Audit audit = new Audit();
         audit.setType("builtin.web");
         report.setAudits(List.of(audit));
@@ -66,13 +66,13 @@ class OpensearchS3AuditConsumerTest {
         assertThat(indexed.getId()).isEqualTo("evt-1");
         // Not overwritten with a strictly-worse (root-only) archive pointer - the report's own
         // s3Uri/s3Key from the wire record must reach OpenSearch untouched.
-        assertThat(indexed.getS3Uri()).isEqualTo("s3://audits-prod/rcu/2026/09/03/existing.batch");
-        assertThat(indexed.getS3Key()).isEqualTo("rcu/2026/09/03/existing.batch");
+        assertThat(indexed.getS3Uri()).isEqualTo("s3://audits-prod/sample/2026/09/03/existing.batch");
+        assertThat(indexed.getS3Key()).isEqualTo("sample/2026/09/03/existing.batch");
         // Unlike onS3Write's archive path, this one indexes the report exactly as the producer
         // sent it - audits included, not stripped.
         assertThat(indexed.getAudits()).extracting(Audit::getType).containsExactly("builtin.web");
 
-        assertThat(metadata.getValue().getDomain()).isEqualTo("rcu");
+        assertThat(metadata.getValue().getDomain()).isEqualTo("kockpit");
         assertThat(metadata.getValue().getEnv()).isEqualTo("prod");
         assertThat(metadata.getValue().getTtl()).isEqualTo(30);
     }
@@ -82,7 +82,7 @@ class OpensearchS3AuditConsumerTest {
     void archives_report_without_existing_s3_pointer_via_s3_consumer() {
         AuditReport report = new AuditReport();
         report.setId("evt-2");
-        report.setDomain("rcu");
+        report.setDomain("kockpit");
         report.setEnv("prod");
         report.setTtl(30);
         // s3Uri / s3Key volontairement absents : ce record n'a pas encore ete offload par le
@@ -103,15 +103,15 @@ class OpensearchS3AuditConsumerTest {
     void routes_each_record_independently_within_a_batch() {
         AuditReport offloaded = new AuditReport();
         offloaded.setId("evt-offloaded");
-        offloaded.setDomain("rcu");
+        offloaded.setDomain("kockpit");
         offloaded.setEnv("prod");
         offloaded.setTtl(30);
-        offloaded.setS3Uri("s3://audits-prod/rcu/existing.batch");
-        offloaded.setS3Key("rcu/existing.batch");
+        offloaded.setS3Uri("s3://audits-prod/sample/existing.batch");
+        offloaded.setS3Key("sample/existing.batch");
 
         AuditReport notOffloaded = new AuditReport();
         notOffloaded.setId("evt-not-offloaded");
-        notOffloaded.setDomain("rcu");
+        notOffloaded.setDomain("kockpit");
         notOffloaded.setEnv("prod");
         notOffloaded.setTtl(30);
 
@@ -137,7 +137,7 @@ class OpensearchS3AuditConsumerTest {
 
         AuditReport report = new AuditReport();
         report.setId("evt-archived");
-        report.setDomain("rcu");
+        report.setDomain("kockpit");
         report.setEnv("prod");
         report.setTtl(30);
         report.setAudits(List.of(audit));
@@ -147,7 +147,7 @@ class OpensearchS3AuditConsumerTest {
         s3Record.setOffset(174443);
         s3Record.setLength(2500);
 
-        consumer.onS3Write(new S3WriteEvent(this, "d=rcu/e=prod/a=app/batch.batch", List.of(s3Record), "audits-prod"));
+        consumer.onS3Write(new S3WriteEvent(this, "d=sample/e=prod/a=app/batch.batch", List.of(s3Record), "audits-prod"));
 
         ArgumentCaptor<List<AuditReport>> reports = ArgumentCaptor.forClass(List.class);
         verify(opensearchIndexer).index(reports.capture(), any());
@@ -158,7 +158,7 @@ class OpensearchS3AuditConsumerTest {
         // into OpenSearch too would only duplicate what's already durably reachable via
         // s3Uri/s3Key/s3Offset/s3Size.
         assertThat(indexed.getAudits()).isEmpty();
-        assertThat(indexed.getS3Uri()).isEqualTo("s3://audits-prod/d=rcu/e=prod/a=app/batch.batch");
+        assertThat(indexed.getS3Uri()).isEqualTo("s3://audits-prod/d=sample/e=prod/a=app/batch.batch");
         assertThat(indexed.getS3Offset()).isEqualTo(174443);
         assertThat(indexed.getS3Size()).isEqualTo(2500);
     }

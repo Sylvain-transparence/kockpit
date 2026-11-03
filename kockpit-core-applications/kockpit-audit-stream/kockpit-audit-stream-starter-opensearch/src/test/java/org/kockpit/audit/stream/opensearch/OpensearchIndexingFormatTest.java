@@ -48,7 +48,7 @@ class OpensearchIndexingFormatTest {
     void keeps_declaration_order() {
         AuditReport report = new AuditReport();
         report.setId("abc");
-        report.setDomain("rcu");
+        report.setDomain("kockpit");
 
         String json = objectMapper.writeValueAsString(report);
 

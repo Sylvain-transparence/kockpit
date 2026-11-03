@@ -204,13 +204,13 @@ module "kockpit_console" {
 
 ### Option 2: Corporate Domain (Manual DNS Setup)
 
-For corporate domains like `kockpit-console.wcplatform-dev.aws.accor.com` where DNS is managed externally:
+For corporate domains like `kockpit-console.dev.example.com` where DNS is managed externally:
 
 1. **Configure the module:**
 ```hcl
 module "kockpit_console" {
   # ... other configuration
-  aliases             = ["kockpit-console.wcplatform-dev.aws.accor.com"]
+  aliases             = ["kockpit-console.dev.example.com"]
   create_certificate  = true
 }
 ```
@@ -231,14 +231,14 @@ terraform output kockpit_console
    **a) Certificate Validation (Required for SSL):**
    ```
    Type: CNAME
-   Name: _acme-challenge.kockpit-console.wcplatform-dev.aws.accor.com
+   Name: _acme-challenge.kockpit-console.dev.example.com
    Value: <validation_record_from_output>
    ```
 
    **b) Domain Pointing (Required for access):**
    ```
    Type: CNAME
-   Name: kockpit-console.wcplatform-dev.aws.accor.com
+   Name: kockpit-console.dev.example.com
    Value: d123456789.cloudfront.net  # (from cloudfront_domain_name output)
    ```
 
@@ -248,7 +248,7 @@ terraform output kockpit_console
 
 6. **Test access:**
 ```bash
-curl -I https://kockpit-console.wcplatform-dev.aws.accor.com
+curl -I https://kockpit-console.dev.example.com
 ```
 
 ### Option 3: No Custom Domain (Simplest)

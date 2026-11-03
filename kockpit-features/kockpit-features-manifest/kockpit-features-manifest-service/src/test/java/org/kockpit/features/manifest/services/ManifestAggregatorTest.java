@@ -14,26 +14,26 @@ class ManifestAggregatorTest {
     @Test
     void merges_manifests_sharing_a_domain_and_env_into_one_entry() {
         List<ManifestDto> aggregated = ManifestAggregator.byDomainAndEnv(List.of(
-                manifest("wcplatform-auditstream-manifest-dev.json", "wcplatform", "dev", "auditstream"),
-                manifest("wcoff-manifest-dev.json", "wcoff", "dev", "offers-api"),
-                manifest("wcplatform-darkcanary-manifest-dev.json", "wcplatform", "dev", "darkcanary-auditstream")));
+                manifest("platform-auditstream-manifest-dev.json", "platform", "dev", "auditstream"),
+                manifest("offers-manifest-dev.json", "offers", "dev", "offers-api"),
+                manifest("platform-canary-manifest-dev.json", "platform", "dev", "canary-auditstream")));
 
-        assertThat(aggregated).extracting(ManifestDto::getDomain).containsExactly("wcplatform", "wcoff");
-        ManifestDto wcplatform = aggregated.getFirst();
-        assertThat(wcplatform.getEnv()).isEqualTo("dev");
-        assertThat(wcplatform.getServices()).extracting(ServiceDto::getId)
-                .containsExactly("auditstream", "darkcanary-auditstream");
-        assertThat(wcplatform.getName())
-                .isEqualTo("wcplatform-auditstream-manifest-dev.json, wcplatform-darkcanary-manifest-dev.json");
-        assertThat(wcplatform.getGroups()).isNull();
-        assertThat(wcplatform.getPolicies()).isNull();
+        assertThat(aggregated).extracting(ManifestDto::getDomain).containsExactly("platform", "offers");
+        ManifestDto platform = aggregated.getFirst();
+        assertThat(platform.getEnv()).isEqualTo("dev");
+        assertThat(platform.getServices()).extracting(ServiceDto::getId)
+                .containsExactly("auditstream", "canary-auditstream");
+        assertThat(platform.getName())
+                .isEqualTo("platform-auditstream-manifest-dev.json, platform-canary-manifest-dev.json");
+        assertThat(platform.getGroups()).isNull();
+        assertThat(platform.getPolicies()).isNull();
     }
 
     @Test
     void keeps_a_service_declared_twice_only_once() {
         List<ManifestDto> aggregated = ManifestAggregator.byDomainAndEnv(List.of(
-                manifest("a.json", "wcc", "dev", "same-api"),
-                manifest("b.json", "wcc", "dev", "same-api")));
+                manifest("a.json", "messaging", "dev", "same-api"),
+                manifest("b.json", "messaging", "dev", "same-api")));
 
         assertThat(aggregated).hasSize(1);
         assertThat(aggregated.getFirst().getServices()).extracting(ServiceDto::getId).containsExactly("same-api");
@@ -42,8 +42,8 @@ class ManifestAggregatorTest {
     @Test
     void same_domain_on_different_envs_stays_separate() {
         List<ManifestDto> aggregated = ManifestAggregator.byDomainAndEnv(List.of(
-                manifest("dev.json", "wcc", "dev", "a"),
-                manifest("local.json", "wcc", "local", "a")));
+                manifest("dev.json", "messaging", "dev", "a"),
+                manifest("local.json", "messaging", "local", "a")));
 
         assertThat(aggregated).extracting(ManifestDto::getEnv).containsExactly("dev", "local");
     }
@@ -51,14 +51,14 @@ class ManifestAggregatorTest {
     @Test
     void a_single_manifest_keeps_its_name_and_drops_access_fields() {
         ManifestDto restricted = ManifestReader.read("""
-                { "domain": "wcxss", "env": "dev", "groups": ["team"],
+                { "domain": "insurance", "env": "dev", "groups": ["team"],
                   "services": [ { "type": "audit", "name": "a", "id": "a" } ] }
                 """.getBytes(StandardCharsets.UTF_8));
-        restricted.setName("wcxss.json");
+        restricted.setName("insurance.json");
 
         ManifestDto aggregated = ManifestAggregator.byDomainAndEnv(List.of(restricted)).getFirst();
 
-        assertThat(aggregated.getName()).isEqualTo("wcxss.json");
+        assertThat(aggregated.getName()).isEqualTo("insurance.json");
         assertThat(aggregated.getServices()).hasSize(1);
         assertThat(aggregated.getGroups()).isNull();
     }

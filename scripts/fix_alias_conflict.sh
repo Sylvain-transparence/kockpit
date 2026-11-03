@@ -8,8 +8,8 @@
 #   ./fix_alias_conflict.sh <alias_name> [real_index_name]
 #
 # Examples:
-#   ./fix_alias_conflict.sh 'wcplatform-auditdata-dev-ttl30d-write'
-#   ./fix_alias_conflict.sh 'wcplatform-auditdata-dev-ttl30d-write' 'wcplatform-auditdata-dev-ttl30d-2026.03.24-000001'
+#   ./fix_alias_conflict.sh 'platform-auditdata-dev-ttl30d-write'
+#   ./fix_alias_conflict.sh 'platform-auditdata-dev-ttl30d-write' 'platform-auditdata-dev-ttl30d-2026.03.24-000001'
 # =============================================================================
 
 # --- Configuration -----------------------------------------------------------
@@ -36,8 +36,8 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ -z "$1" ]; then
   echo -e "  Env vars: OPENSEARCH_HOST, OPENSEARCH_USER, OPENSEARCH_PASS"
   echo -e ""
   echo -e "  Example:"
-  echo -e "    $0 'wcplatform-auditdata-dev-ttl30d-write'"
-  echo -e "    $0 'wcplatform-auditdata-dev-ttl30d-write' 'wcplatform-auditdata-dev-ttl30d-2026.03.24-000001'"
+  echo -e "    $0 'platform-auditdata-dev-ttl30d-write'"
+  echo -e "    $0 'platform-auditdata-dev-ttl30d-write' 'platform-auditdata-dev-ttl30d-2026.03.24-000001'"
   exit 0
 fi
 

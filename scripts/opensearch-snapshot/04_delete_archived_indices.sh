@@ -18,10 +18,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 HOST="${HOST:-https://localhost:9200}"
-REPO="${REPO:-wcbno-archive}"
-SNAPSHOT="${SNAPSHOT:-wcbno-before-20260930-1215}"
-INDICES_FILE="${INDICES_FILE:-wcbno_20260930-1215_delete.txt}"
-DOMAIN="${DOMAIN:-wcbno}"
+REPO="${REPO:-orders-archive}"
+SNAPSHOT="${SNAPSHOT:-orders-before-20260930-1215}"
+INDICES_FILE="${INDICES_FILE:-orders_20260930-1215_delete.txt}"
+DOMAIN="${DOMAIN:-orders}"
 CUTOFF_MS="${CUTOFF_MS:-1790763300000}"   # 2026-09-30 12:15 Europe/Paris
 CURL=(curl -sk --fail-with-body -m 120 -H 'Content-Type: application/json')
 QUERY="{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"domain\":\"${DOMAIN}\"}},{\"range\":{\"@timestamp\":{\"lt\":${CUTOFF_MS},\"format\":\"epoch_millis\"}}}]}}}"

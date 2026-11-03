@@ -24,22 +24,22 @@ class DynaConfigLegacyMapperTest {
                   "internalType": "BROADCAST",
                   "messageId": "d12fc6dd-2a7e-4c89-9137-3b3ea5084811",
                   "serviceId": "dynaconfig",
-                  "domain": "wcplatform",
+                  "domain": "platform",
                   "env": "dev",
-                  "applicationId": "wcpsamples",
+                  "applicationId": "samples",
                   "message": {
                     "__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.InstanceInitPropertiesUpdateRequestDto",
                     "updates": [
                       {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "dyna.property.backend.call.timeout", "newValue": "1"},
                       {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "application.client.axa.basepath", "newValue": null},
                       {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "application.client.apim.aps.timeout", "newValue": "1012"},
-                      {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "application.client.wcxssinsurancequotation.timeout", "newValue": null},
+                      {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "application.client.insurancequotation.timeout", "newValue": null},
                       {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "application.client.apim.aps.x-custom-header", "newValue": "custom2"},
-                      {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "application.wcpsamples.testing.display.for.a.long.property.name.hello-this-is-a-long-property-name-to-test-if-it-is-correctly-displayed", "newValue": null},
+                      {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "application.samples.testing.display.for.a.long.property.name.hello-this-is-a-long-property-name-to-test-if-it-is-correctly-displayed", "newValue": null},
                       {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "ff.backend.new2022", "newValue": "true"},
                       {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "sample.resttemplate.timeout", "newValue": "5001"},
                       {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "application.client.axa.timeout", "newValue": "7000"},
-                      {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "ff.backend.test.nullvalue", "newValue": "default from WCP"}
+                      {"__type__": "com.accor.wcp.sdk.service.dynaconfig.communication.PropertyUpdateMessageRequestDto", "propertyName": "ff.backend.test.nullvalue", "newValue": "default from legacy"}
                     ]
                   }
                 }
@@ -53,9 +53,9 @@ class DynaConfigLegacyMapperTest {
         assertThat(message.getId()).isEqualTo("d12fc6dd-2a7e-4c89-9137-3b3ea5084811");
         assertThat(message.getService()).isEqualTo("dynaconfig");
         assertThat(message.getType()).isEqualTo("update");
-        assertThat(message.getDomain()).isEqualTo("wcplatform");
+        assertThat(message.getDomain()).isEqualTo("platform");
         assertThat(message.getEnv()).isEqualTo("dev");
-        assertThat(message.getAppId()).isEqualTo("wcpsamples");
+        assertThat(message.getAppId()).isEqualTo("samples");
         // Verrou d'unite : creationDate est en millisecondes epoch. Une date en secondes
         // s'ecarterait de ~1,79e12 de l'horloge courante et serait vue comme datant de 1970.
         assertThat(message.getCreationDate())
@@ -64,13 +64,13 @@ class DynaConfigLegacyMapperTest {
                 new KeyValue("dyna.property.backend.call.timeout", "1"),
                 new KeyValue("application.client.axa.basepath", null),
                 new KeyValue("application.client.apim.aps.timeout", "1012"),
-                new KeyValue("application.client.wcxssinsurancequotation.timeout", null),
+                new KeyValue("application.client.insurancequotation.timeout", null),
                 new KeyValue("application.client.apim.aps.x-custom-header", "custom2"),
-                new KeyValue("application.wcpsamples.testing.display.for.a.long.property.name.hello-this-is-a-long-property-name-to-test-if-it-is-correctly-displayed", null),
+                new KeyValue("application.samples.testing.display.for.a.long.property.name.hello-this-is-a-long-property-name-to-test-if-it-is-correctly-displayed", null),
                 new KeyValue("ff.backend.new2022", "true"),
                 new KeyValue("sample.resttemplate.timeout", "5001"),
                 new KeyValue("application.client.axa.timeout", "7000"),
-                new KeyValue("ff.backend.test.nullvalue", "default from WCP")
+                new KeyValue("ff.backend.test.nullvalue", "default from legacy")
         );
     }
 
