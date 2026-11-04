@@ -173,7 +173,11 @@ class OpenSearch:
 # ---------------------------------------------------------------------------------------------
 
 def connection_string(path):
-    text = open(path).read()
+    # Same as java.util.Properties: lines starting with # or ! are comments. Without this, an
+    # old commented-out sasl.jaas.config line was picked up first, its stale key authenticated,
+    # and every topic request then failed with TopicAuthorizationFailedError.
+    text = "\n".join(line for line in open(path).read().splitlines()
+                     if not line.lstrip().startswith(("#", "!")))
     m = re.search(r'password="([^"]+)"', text)
     if not m:
         sys.exit("No password=\"...\" (Event Hubs connection string) found in %s" % path)
