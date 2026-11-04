@@ -18,6 +18,8 @@ maps its own (audit-stream-flavored) variable names onto `ecs-app-module`'s inpu
   - Kinesis consumer (`GetRecords`, `GetShardIterator`, `DescribeStream`, `ListShards`, ...)
   - DynamoDB for KCL lease/checkpoint management
   - OpenSearch indexing
+- When `audit_bucket_name` is set, the expiry rules of the audit archive bucket (see
+  [Audit archive retention](#audit-archive-retention)).
 
 ## Example usage
 
@@ -121,8 +123,30 @@ resource "aws_iam_role_policy" "auditstream_app_role" {
 | `consumer_initial_position_in_stream` | `TRIM_HORIZON` or `LATEST` | `string` | `TRIM_HORIZON` | no |
 | `elasticsearch_indexation_partition_size` | OpenSearch indexation batch size | `number` | `50` | no |
 | `audit_trace_enabled` | Enable audit trace logging | `bool` | `false` | no |
+| `audit_bucket_name` | Existing audit archive bucket to put the expiry rules on; `null` to skip | `string` | `null` | no |
+| `audit_retention_days` | Allowed `retention` tag values, one expiry rule each; also passed as `allowed_ttl_days` | `list(number)` | `[1, 7, 14, 30, 60, 90, 120]` | no |
 | `additional_environment_variables` | Extra environment variables | `list(object({name, value}))` | `[]` | no |
 | `tags` | Tags applied to all resources | `map(string)` | — | no |
+
+## Audit archive retention
+
+With `kockpit.audit.stream.consumer=opensearch-s3`, the audit stream archives batches of audits to
+S3 and tags each object `retention=<days>`: the longest TTL of the audits in it, rounded up to one
+of `audit_retention_days` (capped at the longest). The tag does nothing by itself; this module
+turns it into expiry by putting one lifecycle rule per value on `audit_bucket_name`:
+
+| Rule | Filter | Expires after |
+|------|--------|---------------|
+| `audit-retention-7d` | tag `retention=7` | 7 days (noncurrent versions: 1 more day) |
+
+- The module passes `audit_retention_days` to the application as `KOCKPIT_AUDIT_STREAM_S3_ALLOWED_TTL_DAYS`,
+  so the stream never writes a tag with no rule. Change the list here, not in the application.
+- `aws_s3_bucket_lifecycle_configuration` replaces every lifecycle rule on the bucket: use a bucket
+  dedicated to audits.
+- Objects with no `retention` tag (written before the stream tagged them, or by a producer that
+  offloads its own reports) match no rule and are kept.
+- The bucket itself, write access to it (`s3:PutObject`, `s3:PutObjectTagging`) and the
+  `opensearch-s3` consumer mode are not set by this module.
 
 ## Outputs
 

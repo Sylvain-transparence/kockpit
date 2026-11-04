@@ -202,6 +202,24 @@ variable "audit_trace_enabled" {
   default     = false
 }
 
+# Audit archive (S3)
+variable "audit_bucket_name" {
+  description = "Existing S3 bucket the audit stream archives batches to (kockpit.audit.stream.s3.bucket_name, audits-<env> by default). When set, the module puts one expiry rule per audit_retention_days value on it, replacing any lifecycle rules the bucket already has. Leave null to manage the bucket's lifecycle elsewhere."
+  type        = string
+  default     = null
+}
+
+variable "audit_retention_days" {
+  description = "Retention values, in days, an archived audit batch can be tagged with (retention=<days>). Each one gets an expiry rule on audit_bucket_name, and the same list is passed to the application as kockpit.audit.stream.s3.allowed_ttl_days, so every tag the stream writes has a rule."
+  type        = list(number)
+  default     = [1, 7, 14, 30, 60, 90, 120]
+
+  validation {
+    condition     = length(var.audit_retention_days) > 0 && alltrue([for d in var.audit_retention_days : d >= 1 && floor(d) == d])
+    error_message = "audit_retention_days must list at least one whole number of days, each 1 or more."
+  }
+}
+
 # Additional Environment Variables
 variable "additional_environment_variables" {
   description = "Additional environment variables to pass to the container"
@@ -216,21 +234,23 @@ variable "additional_environment_variables" {
 locals {
   environment_variables = merge(
     {
-      AWS_REGION                              = var.aws_region
-      KOCKPIT_AUDIT_STREAM_AWS_REGION         = var.aws_region
-      SERVER_PORT                             = tostring(var.container_port)
-      MANAGEMENT_SERVER_PORT                  = tostring(local.health_check_port_number)
-      SPRING_PROFILES_ACTIVE                  = "aws"
-      KOCKPIT_ENV                             = var.kockpit_env
-      ENV                                     = var.kockpit_env
-      OPENSEARCH_ENDPOINTS                    = var.opensearch_endpoints
-      KINESIS_STREAM_NAME                     = var.kinesis_stream_name
-      KINESIS_APP_NAME                        = var.kinesis_app_name
-      "CONSUMER_POLL_MAX-RECORDS"             = tostring(var.consumer_poll_max_records)
-      "CONSUMER_INITIAL-POSITION-IN-STREAM"   = var.consumer_initial_position_in_stream
-      ELASTICSEARCH_INDEXATION_PARTITION_SIZE = tostring(var.elasticsearch_indexation_partition_size)
-      KOCKPIT_AUDIT_TRACE_ENABLED             = tostring(var.audit_trace_enabled)
+      AWS_REGION                               = var.aws_region
+      KOCKPIT_AUDIT_STREAM_AWS_REGION          = var.aws_region
+      SERVER_PORT                              = tostring(var.container_port)
+      MANAGEMENT_SERVER_PORT                   = tostring(local.health_check_port_number)
+      SPRING_PROFILES_ACTIVE                   = "aws"
+      KOCKPIT_ENV                              = var.kockpit_env
+      ENV                                      = var.kockpit_env
+      OPENSEARCH_ENDPOINTS                     = var.opensearch_endpoints
+      KINESIS_STREAM_NAME                      = var.kinesis_stream_name
+      KINESIS_APP_NAME                         = var.kinesis_app_name
+      "CONSUMER_POLL_MAX-RECORDS"              = tostring(var.consumer_poll_max_records)
+      "CONSUMER_INITIAL-POSITION-IN-STREAM"    = var.consumer_initial_position_in_stream
+      ELASTICSEARCH_INDEXATION_PARTITION_SIZE  = tostring(var.elasticsearch_indexation_partition_size)
+      KOCKPIT_AUDIT_TRACE_ENABLED              = tostring(var.audit_trace_enabled)
+      KOCKPIT_AUDIT_STREAM_S3_ALLOWED_TTL_DAYS = join(",", var.audit_retention_days)
     },
+    var.audit_bucket_name == null ? {} : { KOCKPIT_AUDIT_STREAM_S3_BUCKET_NAME = var.audit_bucket_name },
     { for e in var.additional_environment_variables : e.name => e.value }
   )
 }
