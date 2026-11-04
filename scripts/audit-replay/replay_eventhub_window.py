@@ -202,6 +202,9 @@ def main():
     p.add_argument("--check-existing", action="store_true", help="dry run: also count records already indexed (_mget)")
     p.add_argument("--execute", action="store_true", help="write to OpenSearch (default: dry run)")
     p.add_argument("--errors", default="replay-errors.jsonl")
+    p.add_argument("--api-version", help="pin the Kafka protocol version, e.g. 2.0.0 (default: negotiated)")
+    p.add_argument("--offsets", help="skip the offset lookup: 'partition:start-end,...' (end exclusive), "
+                                     "e.g. from kafka-get-offsets.sh --time <ms> for --from and --to")
     args = p.parse_args()
 
     password, bootstrap = connection_string(args.command_config)
@@ -209,26 +212,36 @@ def main():
     start_ms, end_ms = parse_time(args.start), parse_time(args.end)
     os_ = OpenSearch(args.opensearch)
 
-    consumer = KafkaConsumer(
+    kafka_options = dict(
         bootstrap_servers=bootstrap,
         security_protocol="SASL_SSL", sasl_mechanism="PLAIN",
         sasl_plain_username="$ConnectionString", sasl_plain_password=password,
         group_id=None, enable_auto_commit=False,
-        max_poll_records=args.bulk_size, request_timeout_ms=60000, api_version=(2, 0, 0),
+        max_poll_records=args.bulk_size, request_timeout_ms=60000,
     )
-    tps = [TopicPartition(args.topic, part) for part in sorted(consumer.partitions_for_topic(args.topic) or [])]
-    if not tps:
-        sys.exit("topic %s not found" % args.topic)
-    consumer.assign(tps)
-    starts = consumer.offsets_for_times({tp: start_ms for tp in tps})
-    ends = consumer.offsets_for_times({tp: end_ms for tp in tps})
-    log_end = consumer.end_offsets(tps)
+    if args.api_version:
+        kafka_options["api_version"] = tuple(int(x) for x in args.api_version.split("."))
+    consumer = KafkaConsumer(**kafka_options)
 
     plan = []
-    for tp in tps:
-        s = starts[tp].offset if starts[tp] else log_end[tp]
-        e = ends[tp].offset if ends[tp] else log_end[tp]
-        plan.append((tp, s, e))
+    if args.offsets:
+        for part in args.offsets.split(","):
+            partition, span = part.split(":")
+            s, e = (int(x) for x in span.split("-"))
+            plan.append((TopicPartition(args.topic, int(partition)), s, e))
+    else:
+        tps = [TopicPartition(args.topic, part) for part in sorted(consumer.partitions_for_topic(args.topic) or [])]
+        if not tps:
+            sys.exit("topic %s not found" % args.topic)
+        consumer.assign(tps)
+        starts = consumer.offsets_for_times({tp: start_ms for tp in tps})
+        ends = consumer.offsets_for_times({tp: end_ms for tp in tps})
+        log_end = consumer.end_offsets(tps)
+        for tp in tps:
+            s = starts[tp].offset if starts[tp] else log_end[tp]
+            e = ends[tp].offset if ends[tp] else log_end[tp]
+            plan.append((tp, s, e))
+    for tp, s, e in plan:
         print("partition %d: offsets %d -> %d (%d records)" % (tp.partition, s, e, max(0, e - s)))
     print("mode: %s, rate <= %.0f docs/s, bulk %d\n" % ("EXECUTE" if args.execute else "dry run", args.rate, args.bulk_size))
 
