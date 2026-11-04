@@ -232,7 +232,7 @@ public class S3AuditConsumer implements SmartLifecycle {
         // listeners (e.g. opensearch-s3 indexing the offloaded reports), not from S3 - reporting it
         // as an S3 write failure hid an OpenSearch client closed too early on shutdown.
         try {
-            eventPublisher.publishEvent(new S3WriteEvent(this, s3Key, batch, bucketName));
+            eventPublisher.publishEvent(new S3WriteEvent(this, s3Key, batch, bucketName, ttl));
             log.trace("Wrote {} audit reports to s3://{}/{}", batch.size(), bucketName, s3Key);
         } catch (Exception e) {
             log.error("❌ Wrote {} audit reports to s3://{}/{} but post-write processing (e.g. OpenSearch indexing) failed: {}",

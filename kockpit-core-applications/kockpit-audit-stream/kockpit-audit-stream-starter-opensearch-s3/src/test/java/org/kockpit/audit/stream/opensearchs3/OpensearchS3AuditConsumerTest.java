@@ -37,7 +37,7 @@ class OpensearchS3AuditConsumerTest {
     private final OpensearchIndexer opensearchIndexer = mock(OpensearchIndexer.class);
 
     private final OpensearchS3AuditConsumer consumer =
-            new OpensearchS3AuditConsumer(s3AuditConsumer, opensearchIndexer, mapper);
+            new OpensearchS3AuditConsumer(s3AuditConsumer, opensearchIndexer, mapper, 1);
 
     @Test
     @DisplayName("Un audit deja offload (s3Uri/s3Key deja renseignes) est indexe directement, sans passer par S3AuditConsumer")
@@ -147,7 +147,7 @@ class OpensearchS3AuditConsumerTest {
         s3Record.setOffset(174443);
         s3Record.setLength(2500);
 
-        consumer.onS3Write(new S3WriteEvent(this, "d=sample/e=prod/a=app/batch.batch", List.of(s3Record), "audits-prod"));
+        consumer.onS3Write(new S3WriteEvent(this, "d=sample/e=prod/a=app/batch.batch", List.of(s3Record), "audits-prod", 30));
 
         ArgumentCaptor<List<AuditReport>> reports = ArgumentCaptor.forClass(List.class);
         verify(opensearchIndexer).index(reports.capture(), any());
@@ -161,5 +161,73 @@ class OpensearchS3AuditConsumerTest {
         assertThat(indexed.getS3Uri()).isEqualTo("s3://audits-prod/d=sample/e=prod/a=app/batch.batch");
         assertThat(indexed.getS3Offset()).isEqualTo(174443);
         assertThat(indexed.getS3Size()).isEqualTo(2500);
+    }
+
+    @Test
+    @DisplayName("Un audit deja offload sans ttl prend le ttl par defaut")
+    void applies_default_ttl_to_already_offloaded_report_without_one() {
+        AuditReport report = new AuditReport();
+        report.setId("evt-no-ttl");
+        report.setDomain("kockpit");
+        report.setEnv("prod");
+        report.setS3Key("sample/existing.batch");
+
+        consumer.accept(List.of(mapper.writeValueAsBytes(report)));
+
+        ArgumentCaptor<IndexMetadata> metadata = ArgumentCaptor.forClass(IndexMetadata.class);
+        verify(opensearchIndexer).index(any(), metadata.capture());
+        assertThat(metadata.getValue().getTtl()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Apres archivage, un audit sans ttl prend le ttl par defaut")
+    void applies_default_ttl_to_archived_report_without_one() {
+        AuditReport report = new AuditReport();
+        report.setId("evt-no-ttl");
+        report.setDomain("kockpit");
+        report.setEnv("prod");
+
+        consumer.onS3Write(archived(report, 1));
+
+        ArgumentCaptor<IndexMetadata> metadata = ArgumentCaptor.forClass(IndexMetadata.class);
+        verify(opensearchIndexer).index(any(), metadata.capture());
+        assertThat(metadata.getValue().getTtl()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("L'index ne garde pas un audit plus longtemps que l'objet S3 vers lequel il pointe")
+    void caps_index_ttl_at_the_s3_object_retention() {
+        AuditReport report = new AuditReport();
+        report.setId("evt-long-ttl");
+        report.setDomain("kockpit");
+        report.setEnv("prod");
+        report.setTtl(200);
+
+        consumer.onS3Write(archived(report, 120));
+
+        ArgumentCaptor<IndexMetadata> metadata = ArgumentCaptor.forClass(IndexMetadata.class);
+        verify(opensearchIndexer).index(any(), metadata.capture());
+        assertThat(metadata.getValue().getTtl()).isEqualTo(120);
+    }
+
+    @Test
+    @DisplayName("Un ttl sous la retention de l'objet S3 est garde tel quel (pas arrondi comme dans S3)")
+    void keeps_index_ttl_below_the_s3_object_retention() {
+        AuditReport report = new AuditReport();
+        report.setId("evt-short-ttl");
+        report.setDomain("kockpit");
+        report.setEnv("prod");
+        report.setTtl(5);
+
+        consumer.onS3Write(archived(report, 7));
+
+        ArgumentCaptor<IndexMetadata> metadata = ArgumentCaptor.forClass(IndexMetadata.class);
+        verify(opensearchIndexer).index(any(), metadata.capture());
+        assertThat(metadata.getValue().getTtl()).isEqualTo(5);
+    }
+
+    private S3WriteEvent archived(AuditReport report, int retentionDays) {
+        S3Record s3Record = new S3Record(mapper.writeValueAsBytes(report), new S3Key());
+        return new S3WriteEvent(this, "d=kockpit/e=prod/a=app/batch.batch", List.of(s3Record), "audits-prod", retentionDays);
     }
 }

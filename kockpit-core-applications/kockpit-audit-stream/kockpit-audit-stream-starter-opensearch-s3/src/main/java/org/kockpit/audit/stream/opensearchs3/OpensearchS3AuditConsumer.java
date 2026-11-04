@@ -27,6 +27,10 @@ public class OpensearchS3AuditConsumer implements AuditConsumer {
 
     private final ObjectMapper objectMapper;
 
+    // Same value S3AuditConsumer falls back on (kockpit.audit.stream.ttl_default_in_days), so a
+    // report without a ttl gets the same retention in OpenSearch as the S3 object it points to.
+    private final int ttlDefaultInDays;
+
     @Override
     public void accept(List<byte[]> bytes) {
         // Some producers already offload the full report (audits included) to their own S3
@@ -56,7 +60,9 @@ public class OpensearchS3AuditConsumer implements AuditConsumer {
     }
 
     private void indexAlreadyOffloaded(List<byte[]> bytes) {
+        // The producer's own S3 object: its retention is not ours to know, only fill in a missing ttl.
         bytes.stream().map(this::parseAuditReport)
+                .peek(auditReport -> auditReport.setTtl(resolveTtl(auditReport, Integer.MAX_VALUE)))
                 .collect(Collectors.groupingBy(IndexMetadata::of))
                 .forEach((indexMetadata, auditReports) -> opensearchIndexer.index(auditReports, indexMetadata));
     }
@@ -72,10 +78,20 @@ public class OpensearchS3AuditConsumer implements AuditConsumer {
             auditReport.setS3Offset(s3Record.getOffset());
 
             auditReport.setAudits(List.of());
+            // S3 rounds the object's retention up to an allowed value but caps it at the longest
+            // one, so a ttl above that cap would keep the index (and its pointer) longer than the
+            // object it points to.
+            auditReport.setTtl(resolveTtl(auditReport, s3WriteEvent.getRetentionDays()));
 
             return auditReport;
         }).collect(Collectors.groupingBy(IndexMetadata::of))
                 .forEach((indexMetadata, auditReports) -> opensearchIndexer.index(auditReports, indexMetadata));
+    }
+
+    // Without a ttl, IndexMetadata has none and building the index name fails.
+    private int resolveTtl(AuditReport auditReport, int maxDays) {
+        Integer ttl = auditReport.getTtl();
+        return Math.min(ttl != null ? ttl : ttlDefaultInDays, maxDays);
     }
 
     private AuditReport parseAuditReport(byte[] data) {

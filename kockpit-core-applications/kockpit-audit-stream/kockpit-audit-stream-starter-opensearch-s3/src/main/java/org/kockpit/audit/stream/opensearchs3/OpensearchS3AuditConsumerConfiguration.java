@@ -4,6 +4,7 @@ import org.kockpit.audit.stream.api.AuditConsumer;
 import org.kockpit.audit.stream.api.AuditStreamJson;
 import org.kockpit.audit.stream.opensearch.OpensearchIndexer;
 import org.kockpit.audit.stream.s3.S3AuditConsumer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,8 +29,9 @@ public class OpensearchS3AuditConsumerConfiguration {
     @ConditionalOnProperty(name = "kockpit.audit.stream.consumer", havingValue = "opensearch-s3")
     public AuditConsumer opensearchS3AuditConsumer(
             S3AuditConsumer s3AuditConsumer,
-            OpensearchIndexer opensearchIndexer
+            OpensearchIndexer opensearchIndexer,
+            @Value("${kockpit.audit.stream.ttl_default_in_days:1}") int ttlDefaultInDays
     ) {
-        return new OpensearchS3AuditConsumer(s3AuditConsumer, opensearchIndexer, mapper());
+        return new OpensearchS3AuditConsumer(s3AuditConsumer, opensearchIndexer, mapper(), ttlDefaultInDays);
     }
 }

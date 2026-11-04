@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.kockpit.audit.stream.api.AuditStreamJson;
 import org.kockpit.audit.stream.api.model.AuditReport;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -185,5 +186,28 @@ class S3AuditConsumerTest {
         // SmartLifecycle beans stop in descending phase order: the Kinesis EFO scheduler runs at
         // DEFAULT_PHASE, Kafka listener containers at DEFAULT_PHASE - 100.
         assertThat(consumer.getPhase()).isLessThan(Integer.MAX_VALUE - 100);
+    }
+
+    @Test
+    @DisplayName("L'evenement d'ecriture porte la retention de l'objet S3 (ttl arrondi a une valeur autorisee)")
+    void write_event_carries_the_object_retention() {
+        AuditReport report = new AuditReport();
+        report.setId("evt-5d");
+        report.setDomain("kockpit");
+        report.setEnv("prod");
+        report.setAppId("app");
+        report.setTtl(5);
+        byte[] fiveDays = mapper.writeValueAsBytes(report);
+        consumer = new S3AuditConsumer(s3Client, "bucket", 1000, 1, List.of(1, 7), eventPublisher, new SimpleMeterRegistry(), 1 << 20);
+
+        consumer.accept(List.of(fiveDays));
+        consumer.drain();
+
+        ArgumentCaptor<PutObjectRequest> put = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(put.capture(), any(RequestBody.class));
+        assertThat(put.getValue().tagging()).isEqualTo("retention=7");
+        ArgumentCaptor<S3WriteEvent> event = ArgumentCaptor.forClass(S3WriteEvent.class);
+        verify(eventPublisher).publishEvent(event.capture());
+        assertThat(event.getValue().getRetentionDays()).isEqualTo(7);
     }
 }
