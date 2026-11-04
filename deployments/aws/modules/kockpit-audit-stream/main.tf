@@ -123,6 +123,33 @@ resource "aws_iam_role_policy" "dynamodb_kcl_policy" {
   })
 }
 
+# IAM policy for writing the audit archive (opensearch-s3 consumer). The stream only uploads: each
+# batch is one PutObject carrying its retention=<days> tag, which S3 also authorizes as
+# PutObjectTagging. Reading archived audits back is the console backend's job, not this task's.
+resource "aws_iam_role_policy" "s3_audit_archive_policy" {
+  count = var.audit_archive_enabled ? 1 : 0
+  name  = "${var.service_name}-s3-audit-archive"
+  role  = module.ecs_app.ecs_task_role
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:PutObjectTagging"]
+        Resource = "arn:aws:s3:::${coalesce(var.audit_bucket_name, "unset")}/*"
+      }
+    ]
+  })
+
+  lifecycle {
+    precondition {
+      condition     = var.audit_bucket_name != null
+      error_message = "audit_archive_enabled needs audit_bucket_name: the bucket the stream archives to."
+    }
+  }
+}
+
 # IAM policy for OpenSearch access
 resource "aws_iam_role_policy" "opensearch_policy" {
   name = "${var.service_name}-opensearch"

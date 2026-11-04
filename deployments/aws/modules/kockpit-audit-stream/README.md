@@ -18,6 +18,8 @@ maps its own (audit-stream-flavored) variable names onto `ecs-app-module`'s inpu
   - Kinesis consumer (`GetRecords`, `GetShardIterator`, `DescribeStream`, `ListShards`, ...)
   - DynamoDB for KCL lease/checkpoint management
   - OpenSearch indexing
+  - With `audit_archive_enabled`, writing to the audit archive bucket (`s3:PutObject`,
+    `s3:PutObjectTagging` on `audit_bucket_name`)
 - When `audit_bucket_name` is set, the expiry rules of the audit archive bucket (see
   [Audit archive retention](#audit-archive-retention)).
 
@@ -124,6 +126,7 @@ resource "aws_iam_role_policy" "auditstream_app_role" {
 | `elasticsearch_indexation_partition_size` | OpenSearch indexation batch size | `number` | `50` | no |
 | `audit_trace_enabled` | Enable audit trace logging | `bool` | `false` | no |
 | `audit_bucket_name` | Existing audit archive bucket to put the expiry rules on; `null` to skip | `string` | `null` | no |
+| `audit_archive_enabled` | Archive batches to `audit_bucket_name` before indexing (`opensearch-s3` consumer) and grant the task write access to it | `bool` | `false` | no |
 | `audit_retention_days` | Allowed `retention` tag values, one expiry rule each; also passed as `allowed_ttl_days` | `list(number)` | `[1, 7, 14, 30, 60, 90, 120]` | no |
 | `additional_environment_variables` | Extra environment variables | `list(object({name, value}))` | `[]` | no |
 | `tags` | Tags applied to all resources | `map(string)` | — | no |
@@ -145,8 +148,15 @@ turns it into expiry by putting one lifecycle rule per value on `audit_bucket_na
   dedicated to audits.
 - Objects with no `retention` tag (written before the stream tagged them, or by a producer that
   offloads its own reports) match no rule and are kept.
-- The bucket itself, write access to it (`s3:PutObject`, `s3:PutObjectTagging`) and the
-  `opensearch-s3` consumer mode are not set by this module.
+- `audit_archive_enabled = true` turns the archive on: the stream runs the `opensearch-s3`
+  consumer (`KOCKPIT_AUDIT_STREAM_CONSUMER`) and the task role gets `s3:PutObject` and
+  `s3:PutObjectTagging` on the bucket's objects. It needs `audit_bucket_name`; plan fails without it.
+- The index template is unchanged: the default one maps the S3 pointer fields dynamically, and
+  keeps `indexedKeyValues` at the document root, which is what the backend searches by default.
+  `audit_index_template_s3.json` is the older, wrapped layout (`indexedExtensions`), only for
+  stacks whose backend runs with `wrap_indexed_key_values=true`.
+- The bucket itself is not created by this module. If it is encrypted with a customer-managed
+  KMS key, the task role also needs `kms:GenerateDataKey` on that key.
 
 ## Outputs
 

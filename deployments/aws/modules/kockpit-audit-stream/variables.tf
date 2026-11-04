@@ -209,6 +209,12 @@ variable "audit_bucket_name" {
   default     = null
 }
 
+variable "audit_archive_enabled" {
+  description = "Archive every batch of audits to audit_bucket_name before indexing it (kockpit.audit.stream.consumer=opensearch-s3): the index keeps a pointer to the S3 object instead of the audits. Grants the task write access to the bucket. Requires audit_bucket_name."
+  type        = bool
+  default     = false
+}
+
 variable "audit_retention_days" {
   description = "Retention values, in days, an archived audit batch can be tagged with (retention=<days>). Each one gets an expiry rule on audit_bucket_name, and the same list is passed to the application as kockpit.audit.stream.s3.allowed_ttl_days, so every tag the stream writes has a rule."
   type        = list(number)
@@ -251,6 +257,7 @@ locals {
       KOCKPIT_AUDIT_STREAM_S3_ALLOWED_TTL_DAYS = join(",", var.audit_retention_days)
     },
     var.audit_bucket_name == null ? {} : { KOCKPIT_AUDIT_STREAM_S3_BUCKET_NAME = var.audit_bucket_name },
+    var.audit_archive_enabled ? { KOCKPIT_AUDIT_STREAM_CONSUMER = "opensearch-s3" } : {},
     { for e in var.additional_environment_variables : e.name => e.value }
   )
 }
