@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {getFeatureFlags, syncFeatureFlags, updateFeatureFlag} from "../services/api.js";
-import {AlertTriangle, CheckCircle2, Clock, Hourglass, RefreshCw, ToggleRight} from "lucide-react";
+import {AlertTriangle, CheckCircle2, Clock, Loader2, RefreshCw, Server, ToggleLeft, ToggleRight} from "lucide-react";
 import {useSearchParams} from "react-router-dom";
 import Stats from "../components/StatsComponent.jsx";
 
@@ -39,39 +39,133 @@ const StateButtonForFlag = ({flag, toggle}) => {
     )
 };
 
-// Instance states sent by the backend: an icon AND a label each, never colour alone.
+// Instance states sent by the backend. Each one differs by icon, label AND shape (solid / striped /
+// dashed border), never by colour alone.
+const STRIPES = {backgroundImage: "repeating-linear-gradient(135deg, rgba(180,83,9,.18) 0 4px, transparent 4px 8px)"};
 const INSTANCE_STATUS = {
-    IN_SYNC: {label: "in sync", Icon: CheckCircle2, className: "text-green-700"},
-    OUTDATED: {label: "out of date", Icon: AlertTriangle, className: "text-amber-700"},
-    WAITING: {label: "waiting", Icon: Hourglass, className: "text-slate-500"},
+    IN_SYNC: {
+        label: "In sync", Icon: CheckCircle2,
+        badge: "bg-emerald-600 text-white border border-emerald-600",
+        tile: "border-emerald-200 bg-emerald-50/40",
+        segment: "bg-emerald-600",
+    },
+    OUTDATED: {
+        label: "Out of date", Icon: AlertTriangle,
+        badge: "bg-amber-50 text-amber-800 border-2 border-amber-500",
+        tile: "border-amber-300 bg-amber-50/60",
+        segment: "bg-amber-100 border border-amber-500", segmentStyle: STRIPES,
+    },
+    WAITING: {
+        label: "Waiting", Icon: Loader2, spin: true,
+        badge: "bg-white text-slate-600 border border-dashed border-slate-400",
+        tile: "border-dashed border-slate-300 bg-white",
+        segment: "bg-white border border-dashed border-slate-400",
+    },
+};
+const ORDER = ["IN_SYNC", "OUTDATED", "WAITING"];
+
+const timeAgo = (ms) => {
+    if (!ms) return "";
+    const seconds = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)} min ago`;
+    return new Date(ms).toLocaleString();
 };
 
-const formatTime = (ms) => ms ? new Date(ms).toLocaleTimeString() : "";
+const StatusBadge = ({status}) => {
+    const {Icon, label, badge, spin} = INSTANCE_STATUS[status] ?? INSTANCE_STATUS.WAITING;
+    return (
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap ${badge}`}>
+            <Icon className={`h-3.5 w-3.5 ${spin ? "animate-spin" : ""}`} aria-hidden="true" />
+            {label}
+        </span>
+    );
+};
 
-const InstancesForFlag = ({instances}) => {
+const ValueChip = ({enabled}) => {
+    const Icon = enabled ? ToggleRight : ToggleLeft;
+    return (
+        <span className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs font-mono font-semibold text-slate-700">
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            {enabled ? "ON" : "OFF"}
+        </span>
+    );
+};
+
+const InstancesForFlag = ({instances, expected}) => {
     if (!instances) return null;
     if (instances.length === 0) {
-        return <div className="text-xs text-slate-400 italic">No running instance reported</div>;
-    }
-    const inSync = instances.filter(i => i.status === "IN_SYNC").length;
-    return (
-        <div className="border-t border-slate-100 pt-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">
-                Instances: {inSync}/{instances.length} in sync
+        return (
+            <div className="border-t border-slate-100 pt-3 flex items-center gap-2 text-xs text-slate-400 italic">
+                <Server className="h-3.5 w-3.5" aria-hidden="true" /> No running instance reported
             </div>
-            <ul className="space-y-1">
-                {instances.map(instance => {
-                    const status = INSTANCE_STATUS[instance.status] ?? INSTANCE_STATUS.WAITING;
-                    const {Icon} = status;
-                    return (
-                        <li key={instance.instanceId} className="flex items-center gap-2 text-xs">
-                            <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${status.className}`} aria-hidden="true" />
-                            <span className="font-mono text-slate-700 break-all">{instance.instanceId}</span>
-                            <span className={`font-medium ${status.className}`}>
-                                {status.label}
-                                {instance.status !== "WAITING" && ` (${instance.enabled ? "enabled" : "disabled"})`}
+        );
+    }
+    const sorted = [...instances].sort((a, b) =>
+        ORDER.indexOf(b.status) - ORDER.indexOf(a.status) || a.instanceId.localeCompare(b.instanceId));
+    const counts = Object.fromEntries(ORDER.map(s => [s, instances.filter(i => i.status === s).length]));
+    const allInSync = counts.IN_SYNC === instances.length;
+    return (
+        <div className="border-t border-slate-100 pt-3 space-y-3">
+            {/* Summary: one segment per instance + counters */}
+            <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                    Instances {counts.IN_SYNC}/{instances.length} in sync
+                </span>
+                <div className="flex gap-1" aria-hidden="true">
+                    {sorted.slice().reverse().map(instance => {
+                        const status = INSTANCE_STATUS[instance.status] ?? INSTANCE_STATUS.WAITING;
+                        return <span key={instance.instanceId} title={`${instance.instanceId}: ${status.label}`}
+                                     className={`h-2.5 w-6 rounded-sm ${status.segment}`} style={status.segmentStyle} />;
+                    })}
+                </div>
+                {allInSync ? (
+                    <StatusBadge status="IN_SYNC" />
+                ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                        {ORDER.filter(s => counts[s] > 0).map(s => (
+                            <span key={s} className="inline-flex items-center gap-1 text-xs text-slate-600">
+                                <StatusBadge status={s} /> ×{counts[s]}
                             </span>
-                            {instance.ackDate && <span className="text-slate-400">· {formatTime(instance.ackDate)}</span>}
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* One tile per instance, problems first */}
+            <ul className="grid gap-2 sm:grid-cols-2">
+                {sorted.map(instance => {
+                    const status = INSTANCE_STATUS[instance.status] ?? INSTANCE_STATUS.WAITING;
+                    return (
+                        <li key={instance.instanceId}
+                            className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 ${status.tile}`}
+                            style={instance.status === "OUTDATED" ? STRIPES : undefined}>
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Server className="h-4 w-4 flex-shrink-0 text-slate-500" aria-hidden="true" />
+                                <div className="min-w-0">
+                                    <div className="font-mono text-xs text-slate-800 truncate" title={instance.instanceId}>
+                                        {instance.instanceId}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                                        {instance.status === "WAITING" ? (
+                                            <span>no acknowledgement yet</span>
+                                        ) : (
+                                            <>
+                                                <span>has</span> <ValueChip enabled={instance.enabled} />
+                                                {instance.status === "OUTDATED" && (
+                                                    <><span>expected</span> <ValueChip enabled={expected} /></>
+                                                )}
+                                                {instance.ackDate && (
+                                                    <span className="inline-flex items-center gap-0.5" title={new Date(instance.ackDate).toLocaleString()}>
+                                                        <Clock className="h-3 w-3" aria-hidden="true" /> {timeAgo(instance.ackDate)}
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <StatusBadge status={instance.status} />
                         </li>
                     );
                 })}
@@ -226,7 +320,7 @@ const FeatureFlippingPage = ({ domain, env, config }) => {
                                         <StateButtonForFlag flag={flag} toggle={handleToggle} />
                                     </div>
                                 </div>
-                                <InstancesForFlag instances={flag.instances} />
+                                <InstancesForFlag instances={flag.instances} expected={flag.enabled} />
                             </div>
                         ))}
                     </div>
