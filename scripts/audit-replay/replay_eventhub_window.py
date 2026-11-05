@@ -201,6 +201,7 @@ def main():
     p.add_argument("--index-suffix", default="audit-data")
     p.add_argument("--ttl-default", type=int, default=5, help="ttl for reports without one (stream default: 5)")
     p.add_argument("--only-domain", action="append", help="replay only these domains (repeatable)")
+    p.add_argument("--only-env", action="append", help="replay only these envs (repeatable), e.g. oat")
     p.add_argument("--bulk-size", type=int, default=500)
     p.add_argument("--rate", type=float, default=500.0, help="max documents written per second")
     p.add_argument("--check-existing", action="store_true", help="dry run: also count records already indexed (_mget)")
@@ -339,6 +340,9 @@ def main():
                     continue
                 if args.only_domain and doc["domain"] not in args.only_domain:
                     stats["other domain"] += 1
+                    continue
+                if args.only_env and doc["env"] not in args.only_env:
+                    stats["other env"] += 1
                     continue
                 _id = doc["id"] or doc["requestId"]
                 if not _id:
