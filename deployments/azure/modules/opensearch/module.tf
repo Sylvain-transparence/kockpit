@@ -18,6 +18,28 @@ variable "disk_size" {
   type    = number
   default = 256
 }
+variable "vm_size" {
+  type    = string
+  default = "Standard_F2"
+}
+variable "heap_size" {
+  description = "OpenSearch JVM heap (-Xms/-Xmx), about 50% of the VM's RAM: 2g on Standard_F2 (4 GB), 4g on Standard_B2ms (8 GB)"
+  type        = string
+  default     = "2g"
+  validation {
+    condition     = can(regex("^[0-9]+[mg]$", var.heap_size))
+    error_message = "heap_size must look like 2g or 2048m."
+  }
+}
+variable "data_path" {
+  description = "Mount point of the data disk. Never under /mnt: on Azure that is the temporary disk, wiped on resize or deallocation."
+  type        = string
+  default     = "/data/opensearch"
+  validation {
+    condition     = !startswith(var.data_path, "/mnt")
+    error_message = "data_path must not be under /mnt (Azure temporary disk)."
+  }
+}
 
 resource "azurerm_network_interface" "ni" {
   name                = "kockpit-ni-${var.node_index}-${var.environment}"
@@ -45,7 +67,7 @@ resource "azurerm_linux_virtual_machine" "opensearch-node" {
     azurerm_network_interface.ni.id
   ]
   resource_group_name = var.rg_name
-  size                = "Standard_F2"
+  size                = var.vm_size
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
@@ -85,9 +107,18 @@ resource "azurerm_virtual_machine_extension" "opensearch-install" {
   nodes_count = var.nodes_count,
   user        = var.username
   seeds       = var.seeds
+  heap_size   = var.heap_size
+  data_path   = var.data_path
 }))}"
   }
 PROT
+
+# The script only provisions new VMs. Re-running it on a live node (which Azure does whenever the
+# script changes) would rewrite the config of every node at once; existing nodes are changed one at
+# a time with scripts/migrate-node.sh instead.
+lifecycle {
+  ignore_changes = [protected_settings]
+}
 
 tags = {
   env  = var.environment
