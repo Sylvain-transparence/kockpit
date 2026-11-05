@@ -39,6 +39,10 @@ public class FeatureFlippingService implements OnMessageListener {
     }
 
     public FeatureFlippingDto update(String domain, String env, String appId, FeatureFlippingDto featureFlippingDto) {
+        // The console sends the manifest's flag (no domain/env/appId): republish() reads them from the cached dto.
+        featureFlippingDto.setDomain(domain);
+        featureFlippingDto.setEnv(env);
+        featureFlippingDto.setAppId(appId);
         Message message = toMessage(domain, env, appId, featureFlippingDto);
         publishers.forEach(publisher -> {
             try  {
@@ -58,6 +62,7 @@ public class FeatureFlippingService implements OnMessageListener {
                 .domain(domain)
                 .env(env)
                 .appId(appId)
+                .body(featureFlippingDto)
                 .keyValues(List.of(
                         new KeyValue(featureFlippingDto.getKey(), Objects.toString(featureFlippingDto.getEnabled(), null))
                 ))
@@ -84,10 +89,21 @@ public class FeatureFlippingService implements OnMessageListener {
                         .env(message.getEnv())
                         .appId(message.getAppId())
                         .key(kv.key())
-                        //.enabled()
+                        // the stored value: without it a restarted backend served enabled=null, and the console
+                        // fell back to the manifest's value
+                        .enabled(toBoolean(kv.value()))
+                        .comment(commentOf(message))
                         .build());
             }
         });
+    }
+
+    private static Boolean toBoolean(Object value) {
+        return value instanceof Boolean b ? b : isNull(value) ? null : Boolean.valueOf(value.toString());
+    }
+
+    private static String commentOf(Message message) {
+        return message.getBody() instanceof Map<?, ?> body && body.get("comment") instanceof String comment ? comment : null;
     }
 
     @Override

@@ -39,6 +39,9 @@ const StateButtonForFlag = ({flag, toggle}) => {
     )
 };
 
+// Backend fields left null (no comment stored, no value yet) must not hide the manifest's ones.
+const withoutNulls = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined));
+
 const FeatureFlippingPage = ({ domain, env, config }) => {
     const [searchParams] = useSearchParams();
     const serviceId = searchParams.get('service') || null;
@@ -59,7 +62,7 @@ const FeatureFlippingPage = ({ domain, env, config }) => {
         getFeatureFlags(domain, env, serviceId)
             .then(apiFlags => {
                 const stateMap = Object.fromEntries(apiFlags.map(f => [f.key, f]));
-                setFlags(manifestFlags.map(f => f.key in stateMap ? { ...f, ...stateMap[f.key] } : f));
+                setFlags(manifestFlags.map(f => f.key in stateMap ? { ...f, ...withoutNulls(stateMap[f.key]) } : f));
             })
             .catch(() => setFlags([...manifestFlags]));
     }, [domain, env, config, serviceId]);
@@ -91,7 +94,7 @@ const FeatureFlippingPage = ({ domain, env, config }) => {
             .then(() => getFeatureFlags(domain, env, serviceId))
             .then(apiFlags => {
                 const stateMap = Object.fromEntries(apiFlags.map(f => [f.key, f]));
-                setFlags(prev => prev.map(f => f.key in stateMap ? { ...f, ...stateMap[f.key] } : f));
+                setFlags(prev => prev.map(f => f.key in stateMap ? { ...f, ...withoutNulls(stateMap[f.key]) } : f));
             })
             .finally(() => setSyncing(false));
     };

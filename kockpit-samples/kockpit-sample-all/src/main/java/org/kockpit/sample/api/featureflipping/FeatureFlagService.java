@@ -25,10 +25,16 @@ public class FeatureFlagService implements OnMessageListener {
 
     @Override
     public void onMessage(Message message) {
-        if (message.getService().equals(FEATURE_FLIPPING)) {
+        if (!message.getService().equals(FEATURE_FLIPPING)) {
+            return;
+        }
+        if (message.getBody() != null) {
             FeatureFlippingDto featureFlippingDto = objectMapper
                     .convertValue(message.getBody(), FeatureFlippingDto.class);
             keys.put(featureFlippingDto.getKey(), featureFlippingDto.getEnabled());
+        } else if (message.getKeyValues() != null) {
+            // messages written before the backend added the body only carry key/value
+            message.getKeyValues().forEach(kv -> keys.put(kv.key(), Boolean.valueOf(String.valueOf(kv.value()))));
         }
     }
 
