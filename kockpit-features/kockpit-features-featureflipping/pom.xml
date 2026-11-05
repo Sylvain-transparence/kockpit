@@ -14,6 +14,7 @@
     <modules>
         <module>kockpit-features-featureflipping-service</module>
         <module>kockpit-features-featureflipping-service-backend</module>
+        <module>kockpit-features-featureflipping-service-application</module>
     </modules>
 
 </project>

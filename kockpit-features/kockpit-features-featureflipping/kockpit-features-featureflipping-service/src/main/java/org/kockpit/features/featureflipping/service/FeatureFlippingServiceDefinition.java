@@ -9,6 +9,9 @@ public class FeatureFlippingServiceDefinition implements ServiceDefinition {
 
     public static final String FEATURE_FLIPPING = "feature-flipping";
 
+    /** message type of the acknowledgement an application instance publishes after applying a value */
+    public static final String ACK = "ack";
+
     @Getter
     private final String audience;
 

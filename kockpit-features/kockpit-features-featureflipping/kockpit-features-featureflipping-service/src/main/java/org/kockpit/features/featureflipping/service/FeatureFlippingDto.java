@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 @Builder
@@ -26,4 +27,10 @@ public class FeatureFlippingDto {
     private Boolean enabled;
 
     private String comment;
+
+    /** creationDate of the message that carries the current value */
+    private Long updatedAt;
+
+    /** instances of the application and whether they applied the current value (served by the backend) */
+    private List<FeatureFlippingInstanceDto> instances;
 }

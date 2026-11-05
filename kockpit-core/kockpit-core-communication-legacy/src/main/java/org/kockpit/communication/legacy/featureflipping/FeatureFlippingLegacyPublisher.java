@@ -25,7 +25,8 @@ public class FeatureFlippingLegacyPublisher implements Publisher {
     @SneakyThrows
     @Override
     public void publish(Message message) {
-        if (!FEATURE_FLIPPING_SERVICE.equals(message.getService())) {
+        // acknowledgements ("ack") from the application instances have no legacy equivalent
+        if (!FEATURE_FLIPPING_SERVICE.equals(message.getService()) || "ack".equals(message.getType())) {
             return;
         }
 

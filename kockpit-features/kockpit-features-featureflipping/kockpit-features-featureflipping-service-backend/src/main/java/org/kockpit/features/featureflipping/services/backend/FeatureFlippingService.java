@@ -9,15 +9,17 @@ import org.kockpit.communication.Message;
 import org.kockpit.communication.Publisher;
 import org.kockpit.core.sdk.OnMessageListener;
 import org.kockpit.features.featureflipping.service.FeatureFlippingDto;
+import org.kockpit.features.featureflipping.service.FeatureFlippingInstanceDto;
+import org.kockpit.features.featureflipping.service.FeatureFlippingInstanceDto.Status;
+import org.kockpit.features.heartbeat.services.backend.HeartBeatManager;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.Objects.isNull;
+import static org.kockpit.features.featureflipping.service.FeatureFlippingServiceDefinition.ACK;
 import static org.kockpit.features.featureflipping.service.FeatureFlippingServiceDefinition.FEATURE_FLIPPING;
 
 @Component
@@ -27,15 +29,22 @@ public class FeatureFlippingService implements OnMessageListener {
 
     private final List<Publisher> publishers;
 
+    private final HeartBeatManager heartBeatManager;
+
     private final Map<FeatureFlippingKey, FeatureFlippingDto> messagesCache = new ConcurrentHashMap<>();
 
+    // flag -> instanceId -> last acknowledgement of that instance
+    private final Map<FeatureFlippingKey, Map<String, Ack>> acks = new ConcurrentHashMap<>();
+
     public List<FeatureFlippingDto> get(String domain, String env, String appId) {
+        Set<String> liveInstances = liveInstances(domain, env, appId);
         return messagesCache.entrySet().stream()
                 .filter(entry -> {
                     FeatureFlippingKey key = entry.getKey();
                     return key.domain.equals(domain) && key.env.equals(env) && key.appId.equals(appId);
                 })
-                .map(Map.Entry::getValue).toList();
+                .map(entry -> withInstances(entry.getValue(), instances(entry.getKey(), entry.getValue(), liveInstances)))
+                .toList();
     }
 
     public FeatureFlippingDto update(String domain, String env, String appId, FeatureFlippingDto featureFlippingDto) {
@@ -43,6 +52,8 @@ public class FeatureFlippingService implements OnMessageListener {
         featureFlippingDto.setDomain(domain);
         featureFlippingDto.setEnv(env);
         featureFlippingDto.setAppId(appId);
+        featureFlippingDto.setInstances(null);
+        featureFlippingDto.setUpdatedAt(Instant.now().toEpochMilli());
         Message message = toMessage(domain, env, appId, featureFlippingDto);
         publishers.forEach(publisher -> {
             try  {
@@ -66,7 +77,8 @@ public class FeatureFlippingService implements OnMessageListener {
                 .keyValues(List.of(
                         new KeyValue(featureFlippingDto.getKey(), Objects.toString(featureFlippingDto.getEnabled(), null))
                 ))
-                .creationDate(Instant.now().toEpochMilli())
+                // a republished value keeps the date of the change: instances apply and acknowledge it only once
+                .creationDate(isNull(featureFlippingDto.getUpdatedAt()) ? Instant.now().toEpochMilli() : featureFlippingDto.getUpdatedAt())
                 .build();
     }
 
@@ -75,15 +87,21 @@ public class FeatureFlippingService implements OnMessageListener {
         if (!message.getService().equals(FEATURE_FLIPPING)) {
             return;
         }
+        if (ACK.equals(message.getType())) {
+            onAck(message);
+            return;
+        }
         if (message.getKeyValues() == null) {
             return;
         }
         message.getKeyValues().forEach(kv -> {
-            FeatureFlippingKey dynaConfigKey = new FeatureFlippingKey(message.getDomain(), message.getEnv(), message.getAppId(), kv.key());
+            FeatureFlippingKey flagKey = new FeatureFlippingKey(message.getDomain(), message.getEnv(), message.getAppId(), kv.key());
+            FeatureFlippingDto cached = messagesCache.get(flagKey);
+            boolean newer = cached != null && cached.getUpdatedAt() != null && message.getCreationDate() > cached.getUpdatedAt();
             if ("update".equals(message.getType()) ||
-                    (isNull(message.getType()) && !messagesCache.containsKey(dynaConfigKey))
+                    (isNull(message.getType()) && (cached == null || newer))
             ) {
-                messagesCache.put(dynaConfigKey, FeatureFlippingDto
+                messagesCache.put(flagKey, FeatureFlippingDto
                         .builder()
                         .domain(message.getDomain())
                         .env(message.getEnv())
@@ -92,18 +110,80 @@ public class FeatureFlippingService implements OnMessageListener {
                         // the stored value: without it a restarted backend served enabled=null, and the console
                         // fell back to the manifest's value
                         .enabled(toBoolean(kv.value()))
-                        .comment(commentOf(message))
+                        .comment(bodyString(message, "comment"))
+                        .updatedAt(message.getCreationDate())
                         .build());
             }
         });
+    }
+
+    private void onAck(Message message) {
+        if (!(message.getBody() instanceof Map<?, ?> body) || isNull(body.get("instanceId")) || isNull(body.get("key"))) {
+            return;
+        }
+        FeatureFlippingKey flagKey = new FeatureFlippingKey(message.getDomain(), message.getEnv(), message.getAppId(), body.get("key").toString());
+        Ack ack = new Ack(toBoolean(body.get("enabled")), toLong(body.get("valueCreationDate")), message.getCreationDate());
+        acks.computeIfAbsent(flagKey, k -> new ConcurrentHashMap<>())
+                .merge(body.get("instanceId").toString(), ack, (old, received) -> received.ackDate >= old.ackDate ? received : old);
+    }
+
+    private Set<String> liveInstances(String domain, String env, String appId) {
+        Set<String> live = new TreeSet<>();
+        heartBeatManager.get(domain, env).stream()
+                .filter(heartbeat -> appId.equals(heartbeat.getAppId()))
+                .forEach(heartbeat -> {
+                    if (heartbeat.getBody() instanceof Map<?, ?> body && body.get("instanceId") != null) {
+                        live.add(body.get("instanceId").toString());
+                    }
+                });
+        return live;
+    }
+
+    private List<FeatureFlippingInstanceDto> instances(FeatureFlippingKey flagKey, FeatureFlippingDto flag, Set<String> liveInstances) {
+        Map<String, Ack> flagAcks = acks.getOrDefault(flagKey, Map.of());
+        // live instances (heartbeat); without heartbeats for this app, whatever acknowledged
+        Set<String> instanceIds = new TreeSet<>(liveInstances.isEmpty() ? flagAcks.keySet() : liveInstances);
+        return instanceIds.stream().map(instanceId -> {
+            Ack ack = flagAcks.get(instanceId);
+            if (ack == null) {
+                return FeatureFlippingInstanceDto.builder().instanceId(instanceId).status(Status.WAITING).build();
+            }
+            boolean current = Objects.equals(ack.enabled, flag.getEnabled())
+                    && (isNull(flag.getUpdatedAt()) || (ack.valueCreationDate != null && ack.valueCreationDate >= flag.getUpdatedAt()));
+            return FeatureFlippingInstanceDto.builder()
+                    .instanceId(instanceId)
+                    .status(current ? Status.IN_SYNC : Status.OUTDATED)
+                    .enabled(ack.enabled)
+                    .valueCreationDate(ack.valueCreationDate)
+                    .ackDate(ack.ackDate)
+                    .build();
+        }).toList();
+    }
+
+    private static FeatureFlippingDto withInstances(FeatureFlippingDto flag, List<FeatureFlippingInstanceDto> instances) {
+        return FeatureFlippingDto.builder()
+                .domain(flag.getDomain())
+                .env(flag.getEnv())
+                .appId(flag.getAppId())
+                .key(flag.getKey())
+                .expirationDate(flag.getExpirationDate())
+                .enabled(flag.getEnabled())
+                .comment(flag.getComment())
+                .updatedAt(flag.getUpdatedAt())
+                .instances(instances)
+                .build();
     }
 
     private static Boolean toBoolean(Object value) {
         return value instanceof Boolean b ? b : isNull(value) ? null : Boolean.valueOf(value.toString());
     }
 
-    private static String commentOf(Message message) {
-        return message.getBody() instanceof Map<?, ?> body && body.get("comment") instanceof String comment ? comment : null;
+    private static Long toLong(Object value) {
+        return value instanceof Number n ? n.longValue() : isNull(value) ? null : Long.valueOf(value.toString());
+    }
+
+    private static String bodyString(Message message, String field) {
+        return message.getBody() instanceof Map<?, ?> body && body.get(field) instanceof String value ? value : null;
     }
 
     @Override
@@ -112,6 +192,9 @@ public class FeatureFlippingService implements OnMessageListener {
             Message message = toMessage(flippingDto.getDomain(), flippingDto.getEnv(), flippingDto.getAppId(), flippingDto);
             publisher.publish(message);
         }));
+    }
+
+    private record Ack(Boolean enabled, Long valueCreationDate, long ackDate) {
     }
 
     @AllArgsConstructor

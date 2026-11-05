@@ -40,7 +40,7 @@ public class HeartBeatPublisher {
         taskScheduler.schedule(() -> {
             log.trace("heartBeat for domain {}, env {} and appId {}", domain, env, appId);
             publishers.forEach(publisher -> publisher.publish(Message.builder()
-                    .id(appId)
+                    .id(instanceId) // one message per instance: replicas of an app must not overwrite each other's heartbeat
                     .service(serviceDefinition.name())
                     .type(serviceDefinition.name())
                     .domain(domain)
@@ -56,7 +56,7 @@ public class HeartBeatPublisher {
     void onStop() {
         log.info("HeartBeat stopped for domain {}, env {}, appId {}", domain, env, appId);
         publishers.forEach(publisher -> publisher.publish(Message.builder()
-                .id(appId)
+                .id(instanceId)
                 .service(serviceDefinition.name())
                 .type(serviceDefinition.name())
                 .domain(domain)

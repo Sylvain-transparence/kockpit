@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {getFeatureFlags, syncFeatureFlags, updateFeatureFlag} from "../services/api.js";
-import {Clock, RefreshCw, ToggleRight} from "lucide-react";
+import {AlertTriangle, CheckCircle2, Clock, Hourglass, RefreshCw, ToggleRight} from "lucide-react";
 import {useSearchParams} from "react-router-dom";
 import Stats from "../components/StatsComponent.jsx";
 
@@ -39,6 +39,47 @@ const StateButtonForFlag = ({flag, toggle}) => {
     )
 };
 
+// Instance states sent by the backend: an icon AND a label each, never colour alone.
+const INSTANCE_STATUS = {
+    IN_SYNC: {label: "in sync", Icon: CheckCircle2, className: "text-green-700"},
+    OUTDATED: {label: "out of date", Icon: AlertTriangle, className: "text-amber-700"},
+    WAITING: {label: "waiting", Icon: Hourglass, className: "text-slate-500"},
+};
+
+const formatTime = (ms) => ms ? new Date(ms).toLocaleTimeString() : "";
+
+const InstancesForFlag = ({instances}) => {
+    if (!instances) return null;
+    if (instances.length === 0) {
+        return <div className="text-xs text-slate-400 italic">No running instance reported</div>;
+    }
+    const inSync = instances.filter(i => i.status === "IN_SYNC").length;
+    return (
+        <div className="border-t border-slate-100 pt-3">
+            <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">
+                Instances: {inSync}/{instances.length} in sync
+            </div>
+            <ul className="space-y-1">
+                {instances.map(instance => {
+                    const status = INSTANCE_STATUS[instance.status] ?? INSTANCE_STATUS.WAITING;
+                    const {Icon} = status;
+                    return (
+                        <li key={instance.instanceId} className="flex items-center gap-2 text-xs">
+                            <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${status.className}`} aria-hidden="true" />
+                            <span className="font-mono text-slate-700 break-all">{instance.instanceId}</span>
+                            <span className={`font-medium ${status.className}`}>
+                                {status.label}
+                                {instance.status !== "WAITING" && ` (${instance.enabled ? "enabled" : "disabled"})`}
+                            </span>
+                            {instance.ackDate && <span className="text-slate-400">· {formatTime(instance.ackDate)}</span>}
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
+    );
+};
+
 // Backend fields left null (no comment stored, no value yet) must not hide the manifest's ones.
 const withoutNulls = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined));
 
@@ -66,6 +107,20 @@ const FeatureFlippingPage = ({ domain, env, config }) => {
             })
             .catch(() => setFlags([...manifestFlags]));
     }, [domain, env, config, serviceId]);
+
+    // Refresh the instances' acknowledgements (they arrive with the applications' polling).
+    useEffect(() => {
+        if (!serviceId) return;
+        const timer = setInterval(() => {
+            getFeatureFlags(domain, env, serviceId)
+                .then(apiFlags => {
+                    const stateMap = Object.fromEntries(apiFlags.map(f => [f.key, f]));
+                    setFlags(prev => prev.map(f => f.key in stateMap ? { ...f, instances: stateMap[f.key].instances } : f));
+                })
+                .catch(() => {});
+        }, 15000);
+        return () => clearInterval(timer);
+    }, [domain, env, serviceId]);
 
     const handleToggle = (flag) => {
         // Create updated flag with toggled value
@@ -171,6 +226,7 @@ const FeatureFlippingPage = ({ domain, env, config }) => {
                                         <StateButtonForFlag flag={flag} toggle={handleToggle} />
                                     </div>
                                 </div>
+                                <InstancesForFlag instances={flag.instances} />
                             </div>
                         ))}
                     </div>

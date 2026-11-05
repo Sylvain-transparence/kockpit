@@ -21,7 +21,7 @@
         </dependency>
         <dependency>
             <groupId>org.kockpit</groupId>
-            <artifactId>kockpit-features-featureflipping-service</artifactId>
+            <artifactId>kockpit-features-featureflipping-service-application</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

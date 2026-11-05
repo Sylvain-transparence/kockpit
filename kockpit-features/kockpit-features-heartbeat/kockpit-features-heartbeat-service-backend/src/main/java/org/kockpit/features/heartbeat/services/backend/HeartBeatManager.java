@@ -46,6 +46,12 @@ public class HeartBeatManager implements OnMessageListener {
 
         String key = instanceKey(message);
 
+        // heartbeat files left behind by stopped instances are polled again and again: not alive
+        if (now - message.getCreationDate() > instanceTtl.toMillis()) {
+            instancesCache.remove(key);
+            return;
+        }
+
         if (isEnded(message)) {
             instancesCache.remove(key);
             log.trace("instance ended, removed from cache: {}", key);
