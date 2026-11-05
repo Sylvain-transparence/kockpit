@@ -12,6 +12,7 @@ on:
       - 'kockpit-core-applications/**'
       - '!kockpit-core-applications/kockpit-console/**'
       - 'pom.xml'
+      - '.github/workflows/backend-docker-build.yml'
   pull_request:
     branches:
       - main
@@ -94,6 +95,7 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
             type=sha,prefix=pr-${{ github.event.number }}-,enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and Push Docker Image
@@ -119,6 +121,7 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
             type=sha,prefix=pr-${{ github.event.number }}-,enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and Push Docker Image
@@ -144,6 +147,7 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
             type=sha,prefix=pr-${{ github.event.number }}-,enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and Push Docker Image
@@ -169,6 +173,7 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
             type=sha,prefix=pr-${{ github.event.number }}-,enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and Push Docker Image
