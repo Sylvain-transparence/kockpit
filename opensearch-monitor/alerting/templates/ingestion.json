@@ -1,0 +1,25 @@
+{
+  "name": "kockpit-__DOMAIN__-ingestion",
+  "monitor_type": "query_level_monitor",
+  "interval_minutes": 10,
+  "comment": "One monitor per domain given with --ingestion DOMAIN:MINUTES; pick domains with steady traffic, others can be silent for hours. Date math (now-30m, {{period_end}}||-30m) matched nothing inside monitors on OpenSearch 3.2, so the trigger compares the newest start with the check time instead.",
+  "inputs": [
+    {
+      "search": {
+        "indices": ["__DOMAIN__-__INDEX__-__ENV__-read"],
+        "query": {
+          "size": 0,
+          "aggs": {"last": {"max": {"field": "start"}}}
+        }
+      }
+    }
+  ],
+  "triggers": [
+    {
+      "id": "stopped",
+      "name": "No __DOMAIN__ audit indexed for __MAX_LAG__ minutes",
+      "severity": "1",
+      "script": "def r = ctx.results[0]; def v = r.aggregations.last.value; if (v == null) { r.stopped = 'no __DOMAIN__ audit at all in __DOMAIN__-__INDEX__-__ENV__-read'; return true; } long lag = (ctx.periodEnd.toEpochMilli() - (long) v) / 60000L; r.stopped = 'newest __DOMAIN__ audit is ' + lag + ' min old (' + r.aggregations.last.value_as_string + ')'; return lag >= __MAX_LAG__;"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "kockpit-node-resources",
+  "monitor_type": "cluster_metrics_monitor",
+  "interval_minutes": 5,
+  "inputs": [
+    {
+      "uri": {
+        "api_type": "NODES_STATS",
+        "path": "_nodes/stats",
+        "path_params": "",
+        "url": "http://localhost:9200/_nodes/stats"
+      }
+    }
+  ],
+  "triggers": [
+    {
+      "id": "heap",
+      "name": "JVM heap pressure (old gen > 75% after GC)",
+      "severity": "2",
+      "comment": "heap_used_percent swings 30-95% with G1 and means little; the old generation left after the last GC is the live set.",
+      "script": "def r = ctx.results[0]; def l = []; for (n in r.nodes.values()) { def p = n.jvm.mem.pools.old.last_gc_stats.usage_percent; if (p > 75) { l.add(n.name + ' ' + p + '% (heap now ' + n.jvm.mem.heap_used_percent + '%)'); } } r.heap = String.join(' · ', l); return !l.isEmpty();"
+    },
+    {
+      "id": "disk",
+      "name": "Data disk over 88% used",
+      "severity": "1",
+      "comment": "OpenSearch default watermarks: low 85%, high 90% (shards are moved away), flood 95% (indices become read-only).",
+      "script": "def r = ctx.results[0]; def l = []; for (n in r.nodes.values()) { def t = n.fs.total; long used = Math.round(100.0 * (t.total_in_bytes - t.available_in_bytes) / t.total_in_bytes); if (used > 88) { l.add(n.name + ' ' + used + '% (' + (t.available_in_bytes / 1073741824L) + ' GB free)'); } } r.disk = String.join(' · ', l); return !l.isEmpty();"
+    },
+    {
+      "id": "rejections",
+      "name": "Rejected requests or tripped circuit breakers (since node start)",
+      "severity": "2",
+      "comment": "The counters are cumulative since the node started, so the alert stays active until the node restarts: it re-notifies once a day only.",
+      "script": "def r = ctx.results[0]; def l = []; for (n in r.nodes.values()) { def s = []; for (pool in ['write', 'search', 'get']) { def tp = n.thread_pool[pool]; if (tp != null && tp.rejected > 0) { s.add(pool + ' rejected=' + tp.rejected); } } for (e in n.breakers.entrySet()) { if (e.getValue().tripped > 0) { s.add('breaker ' + e.getKey() + ' tripped=' + e.getValue().tripped); } } if (!s.isEmpty()) { l.add(n.name + ': ' + String.join(', ', s)); } } r.rejections = String.join(' · ', l); return !l.isEmpty();",
+      "throttle_minutes": 1440
+    },
+    {
+      "id": "queue",
+      "name": "Write queue backing up (> 200 pending)",
+      "severity": "3",
+      "script": "def r = ctx.results[0]; def l = []; for (n in r.nodes.values()) { def q = n.thread_pool.write.queue; if (q > 200) { l.add(n.name + ' queue=' + q); } } r.queue = String.join(' · ', l); return !l.isEmpty();"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "kockpit-cluster-health",
+  "monitor_type": "cluster_metrics_monitor",
+  "interval_minutes": 2,
+  "inputs": [
+    {"uri": {"api_type": "CLUSTER_HEALTH", "path": "_cluster/health", "path_params": "", "url": "http://localhost:9200/_cluster/health"}}
+  ],
+  "triggers": [
+    {
+      "id": "red",
+      "name": "Cluster RED (a primary shard is missing)",
+      "severity": "1",
+      "script": "def h = ctx.results[0]; h.red = 'status=' + h.status + ' · unassigned=' + h.unassigned_shards + ' · initializing=' + h.initializing_shards; return h.status == 'red';"
+    },
+    {
+      "id": "nodes",
+      "name": "Node(s) missing from the cluster",
+      "severity": "1",
+      "script": "def h = ctx.results[0]; h.nodes = h.number_of_nodes + ' of __EXPECTED_NODES__ nodes in the cluster · status=' + h.status; return h.number_of_nodes < __EXPECTED_NODES__;"
+    },
+    {
+      "id": "unassigned",
+      "name": "Unassigned shards",
+      "severity": "2",
+      "script": "def h = ctx.results[0]; h.unassigned = h.unassigned_shards + ' unassigned shard(s), ' + h.delayed_unassigned_shards + ' delayed · status=' + h.status; return h.unassigned_shards > 0;"
+    }
+  ]
+}

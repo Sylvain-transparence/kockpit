@@ -1,0 +1,30 @@
+{
+  "name": "kockpit-indices",
+  "monitor_type": "cluster_metrics_monitor",
+  "interval_minutes": 15,
+  "inputs": [
+    {"uri": {"api_type": "CAT_INDICES", "path": "_cat/indices", "path_params": "", "url": "http://localhost:9200/_cat/indices"}}
+  ],
+  "triggers": [
+    {
+      "id": "stray",
+      "name": "Concrete index named like an alias (*-write / *-read)",
+      "severity": "1",
+      "comment": "Root cause of the 2026-11-04 incident: a write before the bootstrap index existed auto-created a real index named rcu-audit-data-pro-ttl30d-write, which then grew unbounded (no rollover) on one node.",
+      "script": "def r = ctx.results[0]; def l = []; for (i in r.indices) { if (i.index.endsWith('-write') || i.index.endsWith('-read')) { l.add(i.index + ' (' + i['docs.count'] + ' docs, ' + i['pri.store.size'] + ')'); } } r.stray = String.join(' · ', l); return !l.isEmpty();"
+    },
+    {
+      "id": "oversized",
+      "name": "Oversized index (> 50 GB of primary data)",
+      "severity": "2",
+      "comment": "Daily audit indices are a few GB; recovery-* and *-recovered indices from incident recoveries are ignored.",
+      "script": "long toBytes(String s) { if (s == null || s.isEmpty()) { return 0L; } int i = 0; while (i < s.length() && (Character.isDigit(s.charAt(i)) || s.charAt(i) == (char) '.')) { i++; } double v = Double.parseDouble(s.substring(0, i)); String u = s.substring(i); double m = 1; if (u == 'kb') { m = 1024.0; } else if (u == 'mb') { m = 1048576.0; } else if (u == 'gb') { m = 1073741824.0; } else if (u == 'tb') { m = 1099511627776.0; } else if (u == 'pb') { m = 1125899906842624.0; } return (long) (v * m); } def r = ctx.results[0]; def l = []; for (i in r.indices) { String n = i.index; if (n.startsWith('.') || n.startsWith('recovery-') || n.endsWith('-recovered')) { continue; } if (toBytes(i['pri.store.size']) > 50L * 1073741824L) { l.add(n + ' ' + i['pri.store.size']); } } r.oversized = String.join(' · ', l); return !l.isEmpty();"
+    },
+    {
+      "id": "red_indices",
+      "name": "Red index",
+      "severity": "1",
+      "script": "def r = ctx.results[0]; def l = []; for (i in r.indices) { if (i.health == 'red') { l.add(i.index); } } r.red_indices = String.join(' · ', l); return !l.isEmpty();"
+    }
+  ]
+}

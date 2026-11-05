@@ -7,12 +7,14 @@ on:
       - dev
     paths:
       - 'opensearch-monitor/**'
+      - '!opensearch-monitor/alerting/**'
   pull_request:
     branches:
       - main
       - dev
     paths:
       - 'opensearch-monitor/**'
+      - '!opensearch-monitor/alerting/**'
   workflow_dispatch:
 
 env:

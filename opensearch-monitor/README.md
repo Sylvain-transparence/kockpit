@@ -18,6 +18,7 @@ Views:
 opensearch-monitor/
 ├── backend/    # Express API (proxies OpenSearch, serves the built frontend)
 ├── frontend/   # React/Vite app (Chart.js pie chart)
+├── alerting/   # OpenSearch Alerting monitors posting to Teams (not part of the image), see alerting/README.md
 └── Dockerfile  # multi-stage build → one image, one container
 ```
 
