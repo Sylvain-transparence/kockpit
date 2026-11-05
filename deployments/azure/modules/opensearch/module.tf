@@ -22,6 +22,20 @@ variable "vm_size" {
   type    = string
   default = "Standard_F2"
 }
+variable "data_disk_type" {
+  description = <<-EOT
+    Storage type of the data disk. Standard_LRS (HDD, ~500 IOPS) is slow for indexing and _id lookups;
+    Premium_LRS needs a premium-capable vm_size (B2ms, F2s... not F2). Changing it on an existing node
+    deallocates the VM (wipes /mnt): migrate the node with scripts/migrate-node.sh first, change the disk
+    during a maintenance window, then set this to match so the plan has nothing left to do.
+  EOT
+  type        = string
+  default     = "Standard_LRS"
+  validation {
+    condition     = contains(["Standard_LRS", "StandardSSD_LRS", "Premium_LRS"], var.data_disk_type)
+    error_message = "data_disk_type must be Standard_LRS, StandardSSD_LRS or Premium_LRS."
+  }
+}
 variable "heap_size" {
   description = "OpenSearch JVM heap (-Xms/-Xmx), about 50% of the VM's RAM: 2g on Standard_F2 (4 GB), 4g on Standard_B2ms (8 GB)"
   type        = string
@@ -154,7 +168,7 @@ resource "azurerm_managed_disk" "data_disk_256" {
   name                 = "opensearech-${var.environment}-${var.node_index}-data"
   location             = var.location
   resource_group_name  = var.rg_name
-  storage_account_type = "Standard_LRS"
+  storage_account_type = var.data_disk_type
   create_option        = "Empty"
   disk_size_gb         = var.disk_size
 }

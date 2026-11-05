@@ -8,13 +8,14 @@
 # Event Hubs retains the events) and the commands to restart them are printed.
 #
 #   maintenance-migrate.sh --rg kockpit-pro --heap 4g \
-#       --node opensearch-2-pro:Standard_B2ms --node opensearch-3-pro:Standard_B2ms ... \
+#       --node opensearch-2-pro:Standard_B2ms:Premium_LRS --node opensearch-1-pro::Premium_LRS ... \
 #       --app kockpit-audit-stream-pro --app kockpit-audit-stream-rescue-pro \
 #       --check-index rcu-audit-data-pro-read \
 #       [--subscription <id or name>] [--url http://localhost:9200] [--data-path /data/opensearch]
 #       [--max-lag 5] [--yes] [--allow-tasks] [--allow-untagged-images]
 #
-# --node NAME[:SIZE]: SIZE resizes the VM (reboot), leave it out when the VM already has the right size.
+# --node NAME[:SIZE[:DISK_TYPE]]: SIZE resizes the VM (reboot), DISK_TYPE changes the data disk type
+# (VM deallocated, data kept); leave either empty when it does not change, e.g. NAME::Premium_LRS.
 # Writers must run an image with a date tag (YYYYMMDD-HHMMSS): those drain their in-memory queue on
 # shutdown; older ones (e.g. dev-6271c37, 1.1.1) can lose it. --allow-untagged-images skips that check.
 set -euo pipefail
@@ -80,7 +81,7 @@ replicas() { AZ containerapp replica list -g "$RG" -n "$1" --revision "$2" --que
 log "pre-flight checks on $URL"
 IN_CLUSTER=$(cluster_nodes) || fail "cannot reach $URL: is the tunnel open?"
 for spec in "${NODES[@]}"; do
-  vm=${spec%%:*}
+  IFS=: read -r vm _ _ <<< "$spec"
   grep -qx "$vm" <<< "$IN_CLUSTER" || fail "$vm is not a node of the cluster behind $URL (wrong tunnel?)"
 done
 read -r STATUS COUNT UNASSIGNED <<< "$(health)"
@@ -113,8 +114,8 @@ echo
 echo "Plan (rg $RG, heap $HEAP, data $DATA_PATH, log $LOG):"
 for app in "${APPS[@]+"${APPS[@]}"}"; do echo "  - stop $app"; done
 for spec in "${NODES[@]}"; do
-  vm=${spec%%:*}; size=""; [ "$spec" != "$vm" ] && size=${spec#*:}
-  echo "  - migrate $vm${size:+, resize to $size}"
+  IFS=: read -r vm size disk <<< "$spec"
+  echo "  - migrate $vm${size:+, resize to $size}${disk:+, data disk to $disk}"
 done
 for app in "${APPS[@]+"${APPS[@]}"}"; do echo "  - restart $app"; done
 echo
@@ -151,11 +152,12 @@ done
 n=0
 for spec in "${NODES[@]}"; do
   n=$((n + 1))
-  vm=${spec%%:*}; size=""; [ "$spec" != "$vm" ] && size=${spec#*:}
+  IFS=: read -r vm size disk <<< "$spec"
   echo
-  confirm "[$n/${#NODES[@]}] migrate $vm${size:+ and resize it to $size}?" || fail "stopped before $vm"
+  confirm "[$n/${#NODES[@]}] migrate $vm${size:+, resize it to $size}${disk:+, data disk to $disk}?" || fail "stopped before $vm"
   ARGS=(--rg "$RG" --vm "$vm" --heap "$HEAP" --url "$URL" --data-path "$DATA_PATH")
   [ -n "$size" ] && ARGS+=(--size "$size")
+  [ -n "$disk" ] && ARGS+=(--disk-type "$disk")
   [ ${#SUB[@]} -gt 0 ] && ARGS+=("${SUB[@]}")
   "$HERE/rolling-migrate.sh" "${ARGS[@]}" || fail "$vm: see rolling-migrate.sh output above"
   log "[OK] [$n/${#NODES[@]}] $vm migrated"
@@ -192,5 +194,5 @@ fi
 
 echo
 log "[OK] maintenance done. Before the next terraform apply on this environment, set the VM sizes in"
-log "     kockpit-tf (vm_sizes_per_env) to the sizes used here, or Terraform resizes the VMs back."
+log "     kockpit-tf (vm_sizes, data disk types) to the values used here, or Terraform resizes the VMs back."
 curl -s "$URL/_cat/nodes?v&h=name,heap.max,ram.max,disk.used_percent&s=name"
