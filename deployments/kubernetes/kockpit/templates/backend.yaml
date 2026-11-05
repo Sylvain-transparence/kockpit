@@ -62,6 +62,8 @@ spec:
             - { name: NOTIFICATION_TOPIC, value: {{ .Values.auditTopic | quote }} }
             - { name: FS_MANIFESTS_PATH, value: /data/manifests }
             - { name: FS_STORAGE_PATH, value: /data }
+            # drives all the backend's polling (heartbeats, acknowledgements, values), despite its name
+            - { name: KOCKPIT_BACKEND_HEARTBEAT_POLLER_SCHEDULING, value: {{ .Values.backend.pollInterval | quote }} }
             {{- with .Values.backend.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
