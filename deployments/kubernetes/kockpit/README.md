@@ -57,6 +57,7 @@ kubectl -n kockpit port-forward svc/kockpit-sample-app 8082:8082 # sample app AP
 | `sampleApp.enabled`                    | `true`       | Sample application generating audits                             |
 | `sampleApp.notificationDelayMs`        | `5000`       | How often the sample app sends its buffered audits               |
 | `backend.pollInterval`                 | `PT5S`       | How often the backend reads the shared storage (heartbeats, acks) |
+| `console.flagsRefreshMs`               | `5000`       | Refresh of the feature-flipping page (instances' acks), in ms    |
 | `sampleApp.pollInterval`               | `PT5S`       | How often the sample app reads flag and configuration values     |
 | `<component>.env`                      | `[]`         | Extra environment variables for a Kockpit application            |
 | `<component>.resources`                |              | Requests and limits                                              |

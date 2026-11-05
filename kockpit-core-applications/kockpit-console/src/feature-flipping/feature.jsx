@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {getFeatureFlags, syncFeatureFlags, updateFeatureFlag} from "../services/api.js";
+import {getFeatureFlippingRefreshMs} from "../services/config.js";
 import {AlertTriangle, CheckCircle2, Clock, Loader2, RefreshCw, Server, ToggleLeft, ToggleRight} from "lucide-react";
 import {useSearchParams} from "react-router-dom";
 import Stats from "../components/StatsComponent.jsx";
@@ -212,7 +213,7 @@ const FeatureFlippingPage = ({ domain, env, config }) => {
                     setFlags(prev => prev.map(f => f.key in stateMap ? { ...f, instances: stateMap[f.key].instances } : f));
                 })
                 .catch(() => {});
-        }, 15000);
+        }, getFeatureFlippingRefreshMs());
         return () => clearInterval(timer);
     }, [domain, env, serviceId]);
 

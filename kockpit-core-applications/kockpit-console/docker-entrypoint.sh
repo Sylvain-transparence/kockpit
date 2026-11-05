@@ -15,5 +15,10 @@ if [ ! -z "$VITE_API_BASE" ] && [ -f "/usr/share/nginx/html/config.js" ]; then
   sed -i "s|\${VITE_API_BASE}|$VITE_API_BASE|g" /usr/share/nginx/html/config.js
 fi
 
+if [ ! -z "$FEATURE_FLIPPING_REFRESH_MS" ] && [ -f "/usr/share/nginx/html/config.js" ]; then
+  echo "Feature flipping refresh: $FEATURE_FLIPPING_REFRESH_MS ms"
+  sed -i "s|\${FEATURE_FLIPPING_REFRESH_MS}|$FEATURE_FLIPPING_REFRESH_MS|g" /usr/share/nginx/html/config.js
+fi
+
 # Start the passed command (nginx)
 exec "$@"

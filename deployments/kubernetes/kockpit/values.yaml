@@ -76,6 +76,8 @@ backend:
 console:
   enabled: true
   image: kockpit-console
+  # how often the feature-flipping page refreshes the instances' acknowledgements (ms; 15000 when unset)
+  flagsRefreshMs: 5000
   service:
     port: 80
   resources:
