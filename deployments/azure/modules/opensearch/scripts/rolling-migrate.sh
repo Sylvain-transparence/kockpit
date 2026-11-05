@@ -11,7 +11,8 @@
 #
 # While the node is down its shards are unavailable (audit indices have 0 replicas): writes to
 # indices whose shards live on it fail for those minutes. Pause the audit stream, or run it at a
-# quiet hour.
+# quiet hour. maintenance-migrate.sh does all of it: stops the writers, runs this script node after
+# node, restarts the writers.
 set -euo pipefail
 
 URL=http://localhost:9200
