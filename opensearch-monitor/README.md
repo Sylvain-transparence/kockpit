@@ -83,7 +83,8 @@ docker run -p 3000:3000 -e OPENSEARCH_URL=http://your-cluster:9200 opensearch-mo
 
 A [workflow](../.github/workflows/opensearch-monitor-docker-build.yml) builds and
 pushes this image to GHCR on every push to `main`/`dev` that touches
-`opensearch-monitor/**`, plus PRs and manual `workflow_dispatch` runs. Pull and
+`opensearch-monitor/**` (except `opensearch-monitor/alerting/**`, which is not part
+of the image), plus PRs and manual `workflow_dispatch` runs. Pull and
 run it directly, no local build needed:
 
 ```bash
