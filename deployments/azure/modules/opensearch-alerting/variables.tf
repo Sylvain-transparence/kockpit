@@ -28,6 +28,12 @@ variable "disk_mount_points" {
   default     = ["/", "/data/opensearch"]
 }
 
+variable "memory_alert_threshold_percent" {
+  description = "The memory alert fires when a node stays under this % of available memory. Keep it below the nodes' normal level, or the alert flaps."
+  type        = number
+  default     = 10
+}
+
 variable "teams_enabled" {
   description = "Post the alerts to Teams. A separate flag, as Terraform cannot count on the (sensitive) URL."
   type        = bool

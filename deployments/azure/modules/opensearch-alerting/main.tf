@@ -232,8 +232,8 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "disk" {
 
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "memory" {
   name                 = "${var.name_prefix}-opensearch-memory-${var.environment}"
-  display_name         = "OpenSearch node low on memory (< 10% available)"
-  description          = "Available memory (page cache included) on an OpenSearch node has been under 10% for 15 minutes: risk of OOM kill."
+  display_name         = "OpenSearch node low on memory (< ${var.memory_alert_threshold_percent}% available)"
+  description          = "Available memory (page cache included) on an OpenSearch node has been under ${var.memory_alert_threshold_percent}% for 15 minutes: risk of OOM kill."
   location             = var.location
   resource_group_name  = var.rg_name
   scopes               = [var.log_analytics_workspace_id]
@@ -250,7 +250,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "memory" {
     time_aggregation_method = "Maximum"
     metric_measure_column   = "AvailablePercent"
     operator                = "LessThan"
-    threshold               = 10
+    threshold               = var.memory_alert_threshold_percent
 
     dimension {
       name     = "Computer"
