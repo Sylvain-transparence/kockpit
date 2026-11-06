@@ -12,8 +12,9 @@ ENV VITE_BUILD_TIME=$VITE_BUILD_TIME
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies, build tools (vite, devDependencies) included whatever NODE_ENV:
+# with NODE_ENV=production npm ci would leave them out and the build fail
+RUN npm ci --include=dev
 
 # Copy source code
 COPY . .
