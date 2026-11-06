@@ -36,6 +36,7 @@ spec:
         # restart the backend (and re-copy the manifests) when they change
         checksum/manifests: {{ include (print $.Template.BasePath "/data.yaml") . | sha256sum }}
     spec:
+      {{- include "kockpit.scheduling" $ | nindent 6 }}
       {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
       initContainers:
         {{- if .Values.auth.local.enabled }}

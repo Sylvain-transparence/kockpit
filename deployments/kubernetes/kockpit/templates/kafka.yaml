@@ -31,6 +31,7 @@ spec:
       labels:
         {{- include "kockpit.selectorLabels" $c | nindent 8 }}
     spec:
+      {{- include "kockpit.scheduling" $ | nindent 6 }}
       # the apache/kafka image turns every KAFKA_* variable into a broker setting: keep the
       # KAFKA_SERVICE_HOST-style variables Kubernetes injects for services out of the container
       enableServiceLinks: false

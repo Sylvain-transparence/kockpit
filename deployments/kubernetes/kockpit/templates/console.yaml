@@ -30,6 +30,7 @@ spec:
       labels:
         {{- include "kockpit.selectorLabels" $c | nindent 8 }}
     spec:
+      {{- include "kockpit.scheduling" $ | nindent 6 }}
       {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
       containers:
         - name: console

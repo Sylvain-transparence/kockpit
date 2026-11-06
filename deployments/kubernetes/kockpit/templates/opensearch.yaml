@@ -31,6 +31,7 @@ spec:
       labels:
         {{- include "kockpit.selectorLabels" $c | nindent 8 }}
     spec:
+      {{- include "kockpit.scheduling" $ | nindent 6 }}
       securityContext:
         fsGroup: 1000
       containers:
@@ -112,6 +113,7 @@ spec:
       labels:
         {{- include "kockpit.selectorLabels" $d | nindent 8 }}
     spec:
+      {{- include "kockpit.scheduling" $ | nindent 6 }}
       containers:
         - name: dashboards
           image: {{ .Values.dashboards.image }}

@@ -34,6 +34,7 @@ spec:
       labels:
         {{- include "kockpit.selectorLabels" $c | nindent 8 }}
     spec:
+      {{- include "kockpit.scheduling" $ | nindent 6 }}
       {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
       initContainers:
         # the backend owns the schema (Flyway): wait until it has created the API keys table

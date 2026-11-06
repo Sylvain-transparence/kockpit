@@ -6,6 +6,14 @@ image:
 
 imagePullSecrets: []
 
+# Where every Kockpit pod runs (all components, infrastructure included), e.g. one node of a multi-node cluster:
+# with local-path volumes, a volume is created on the node its pod first lands on, and the pod stays there.
+#   nodeSelector:
+#     kubernetes.io/hostname: office-02
+nodeSelector: {}
+# e.g. to run on a tainted node
+tolerations: []
+
 # ---------------------------------------------------------------------------------------------------------------
 # Infrastructure
 # ---------------------------------------------------------------------------------------------------------------

@@ -61,6 +61,7 @@ kubectl -n kockpit port-forward svc/kockpit-sample-app 8082:8082 # sample app AP
 | `sampleApp.pollInterval`               | `PT5S`       | How often the sample app reads flag and configuration values     |
 | `<component>.env`                      | `[]`         | Extra environment variables for a Kockpit application            |
 | `<component>.resources`                |              | Requests and limits                                              |
+| `nodeSelector` / `tolerations`         | `{}` / `[]`  | Where every pod runs, e.g. `kubernetes.io/hostname: <node>` to keep all pods (and their local-path volumes) on one node of a multi-node cluster |
 | `ingress.enabled` / `ingress.host`     | `false`      | Ingress to the console (and `/api` to the backend)               |
 | `ingress.gatewayHost`                  | `""`         | Host of the ingestion gateway's `/ingest`                        |
 | `ingress.certManagerClusterIssuer`     | `""`         | cert-manager ClusterIssuer: one TLS certificate per host         |

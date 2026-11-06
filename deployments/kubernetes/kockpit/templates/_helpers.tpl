@@ -100,3 +100,15 @@ imagePullSecrets:
 {{- printf "%s://%s" (include "kockpit.scheme" .) .Values.ingress.gatewayHost -}}
 {{- end -}}
 {{- end -}}
+
+{{/* where every pod runs: nodeSelector and tolerations, shared by all components (empty: anywhere) */}}
+{{- define "kockpit.scheduling" -}}
+{{- with .Values.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end -}}
