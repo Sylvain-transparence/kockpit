@@ -29,6 +29,7 @@
         <module>kockpit-backend-application</module>
         <module>kockpit-audit-stream</module>
         <module>kockpit-kinesis-s3-application</module>
+        <module>kockpit-gateway-application</module>
     </modules>
 
 </project>

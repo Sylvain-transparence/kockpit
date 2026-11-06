@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: kockpit-gateway-application
+  main:
+    banner-mode: off
+  # the backend's local accounts database: api_keys, tenants, usage_daily (migrated by the backend)
+  datasource:
+    url: ${KOCKPIT_DB_URL:jdbc:postgresql://localhost:5432/kockpit}
+    username: ${KOCKPIT_DB_USERNAME:kockpit}
+    password: ${KOCKPIT_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${KOCKPIT_DB_POOL_SIZE:5}
+  kafka:
+    bootstrap-servers: ${BOOTSTRAP_SERVERS:localhost:9092}
+
+server:
+  port: ${SERVER_PORT:8080}
+  # behind the ingress: the client address (failed-key limiter) from X-Forwarded-For
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:native}
+  tomcat:
+    # bodies are read in bounded chunks by the API; this only caps what Tomcat itself buffers
+    max-swallow-size: 2MB
+
+management:
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:8091}
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+kockpit:
+  communication:
+    filesystem:
+      # the directory the backend polls (FS_STORAGE_PATH of the backend)
+      path: ${FS_STORAGE_PATH}
+  gateway:
+    audits:
+      topic: ${NOTIFICATION_TOPIC:audits}
+      # retention forced on every audit (OpenSearch index ttl): a client can't choose its own
+      ttl-days: ${KOCKPIT_GATEWAY_AUDIT_TTL_DAYS:7}
+      max-batch: ${KOCKPIT_GATEWAY_MAX_BATCH:500}
+      max-body-bytes: ${KOCKPIT_GATEWAY_MAX_BODY_BYTES:1048576}
+    messages:
+      max-body-bytes: ${KOCKPIT_GATEWAY_MAX_MESSAGE_BYTES:65536}
+      per-key-per-hour: ${KOCKPIT_GATEWAY_MESSAGES_PER_HOUR:1200}
+      max-poll: ${KOCKPIT_GATEWAY_MAX_POLL:200}
+    keys:
+      # how long a key lookup is cached: a revoked key may still work for this long
+      cache-ttl: ${KOCKPIT_GATEWAY_KEY_CACHE_TTL:30s}
+      failures-per-ip-per-minute: ${KOCKPIT_GATEWAY_KEY_FAILURES_PER_MINUTE:30}
