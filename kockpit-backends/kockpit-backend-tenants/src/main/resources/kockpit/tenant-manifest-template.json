@@ -1,0 +1,26 @@
+{
+  "services": [
+    {
+      "type": "audit",
+      "name": "Audits",
+      "id": "audit-${env}",
+      "config": {
+        "columns": ["appId", "requestId", "method", "path", "duration", "start", "status"],
+        "search_columns": [
+          {
+            "name": "httpStatus",
+            "type": "options",
+            "options": [200, 201, 204, 400, 401, 403, 404, 429, 500, 503],
+            "path": "indexedKeyValues.httpStatus"
+          },
+          {
+            "name": "httpMethod",
+            "type": "options",
+            "options": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            "path": "indexedKeyValues.httpMethod"
+          }
+        ]
+      }
+    }
+  ]
+}

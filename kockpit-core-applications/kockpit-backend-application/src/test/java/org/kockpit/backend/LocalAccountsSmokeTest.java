@@ -2,13 +2,11 @@ package org.kockpit.backend;
 
 import org.junit.jupiter.api.Test;
 import org.kockpit.features.manifest.services.backend.ManifestAccessService;
-import org.kockpit.features.manifest.services.backend.ManifestBackendService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.web.SecurityFilterChain;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -19,12 +17,14 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The whole backend with local accounts on (default Maven profile, filesystem storage): one
- * filter chain (the local one), access control on by default, signup then an API call.
+ * filter chain (the local one), access control on by default, signup then an API call, then a
+ * tenant whose manifest is stored and whose domain gets polled right away.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "FS_STORAGE_PATH=target/smoke-local-data",
@@ -55,14 +55,14 @@ class LocalAccountsSmokeTest {
         registry.add("KOCKPIT_DB_PASSWORD", POSTGRES::getPassword);
     }
 
-    @MockitoBean
-    ManifestBackendService manifestBackendService;
-
     @Autowired
     List<SecurityFilterChain> filterChains;
 
     @Autowired
     ManifestAccessService manifestAccessService;
+
+    @Autowired
+    ManifestPollers manifestPollers;
 
     @LocalServerPort
     int port;
@@ -89,6 +89,19 @@ class LocalAccountsSmokeTest {
                 HttpResponse.BodyHandlers.ofString());
         assertThat(me.statusCode()).isEqualTo(200);
         assertThat(me.body()).contains("smoke@example.com");
+
+        // the manifests directory outlives the run: a new name each time
+        String slug = "smoke" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        HttpResponse<String> tenant = http.send(HttpRequest.newBuilder(uri("/api/tenants"))
+                        .header("Content-Type", "application/json").header("Cookie", cookie)
+                        .POST(HttpRequest.BodyPublishers.ofString("{\"slug\":\"" + slug + "\"}"))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(tenant.statusCode()).isEqualTo(201);
+        assertThat(manifestPollers.started()).contains(slug + "|dev|heartbeat", slug + "|dev|audit");
+        HttpResponse<String> manifests = http.send(HttpRequest.newBuilder(uri("/api/manifests")).header("Cookie", cookie).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(manifests.body()).contains("tenant-" + slug + "-dev.json");
     }
 
     private URI uri(String path) {

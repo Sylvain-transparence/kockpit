@@ -185,6 +185,11 @@ public class ManifestAccessService {
         return hideUnrestricted && !ManifestAccess.isRestricted(manifest);
     }
 
+    /** Whether the user is in one of {@code kockpit.security.access-control.admin-groups}. */
+    public boolean isAdmin(Authentication authentication) {
+        return isAdmin(userGroups(authentication));
+    }
+
     private boolean isAdmin(Set<String> groups) {
         return groups.stream().anyMatch(group -> adminGroups.stream().anyMatch(group::equalsIgnoreCase));
     }

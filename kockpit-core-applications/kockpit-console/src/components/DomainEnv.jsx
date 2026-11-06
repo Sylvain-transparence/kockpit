@@ -6,7 +6,8 @@ import {StarIcon as StarOutlineIcon} from "@heroicons/react/24/outline";
 import {StarIcon as StarSolidIcon} from "@heroicons/react/24/solid";
 import {findFavoriteIndex, isFavoriteConfig, loadFavoriteConfig, saveFavoriteConfig} from "../settings/favoriteConfig.js";
 
-function DomainEnv({onConfigLoaded, domainEnvChanged, selectedIndex = 0, onSelectedIndex}) {
+// onEmpty: called when the user may see no manifest at all, instead of showing it as an error
+function DomainEnv({onConfigLoaded, domainEnvChanged, selectedIndex = 0, onSelectedIndex, onEmpty}) {
     const [searchParams] = useSearchParams();
     const [options, setOptions] = useState([]);
     const [configError, setConfigError] = useState(null);
@@ -23,6 +24,10 @@ function DomainEnv({onConfigLoaded, domainEnvChanged, selectedIndex = 0, onSelec
                 return;
             }
             if (config.length === 0) {
+                if (onEmpty) {
+                    onEmpty();
+                    return;
+                }
                 setConfigError('No manifests found on the backend');
                 return;
             }
@@ -79,6 +84,10 @@ function DomainEnv({onConfigLoaded, domainEnvChanged, selectedIndex = 0, onSelec
         const updated = selectedIsFavorite ? null : {domain: selectedOption.domain, env: selectedOption.env};
         saveFavoriteConfig(updated);
         setFavorite(updated);
+    }
+
+    if (options.length === 0 && onEmpty && !configError) {
+        return null;
     }
 
     if (configError) {

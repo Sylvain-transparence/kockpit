@@ -15,11 +15,13 @@ import {
     FlagIcon,
     HeartIcon,
     HomeIcon,
+    KeyIcon,
     UserIcon,
     ServerIcon
 } from '@heroicons/react/24/outline';
 import {ToggleRight} from 'lucide-react';
 import {logout} from "../services/api.js";
+import {isLocalAuth} from "../services/config.js";
 
 const UserInfo = ({collapsed, currentUser, logout}) => {
     return (
@@ -87,6 +89,11 @@ const Sidebar = ({ collapsed, setCollapsed, config, user }) => {
   }
 
   const logoutUser = () => {
+      if (isLocalAuth()) {
+          // reload: the console then finds no session and shows the login page
+          logout().finally(() => window.location.assign('/'));
+          return;
+      }
       logout().then(() => {
          navigate("/login");
       });
@@ -163,6 +170,15 @@ const Sidebar = ({ collapsed, setCollapsed, config, user }) => {
                       onClick={() => navigate('/manifest')}
                       active={location.pathname === '/manifest'}
                   />
+                  {isLocalAuth() && (
+                      <NavItem
+                          icon={<KeyIcon className="h-5 w-5" />}
+                          label="Tenant & API keys"
+                          collapsed={collapsed}
+                          onClick={() => navigate('/tenant')}
+                          active={location.pathname === '/tenant'}
+                      />
+                  )}
               </nav>
               <div className="mx-3 my-2 border-t border-slate-600" />
               <nav className="px-2">

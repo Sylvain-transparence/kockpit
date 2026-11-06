@@ -1,6 +1,6 @@
 import axios from 'axios';
 import {useEffect, useState} from "react";
-import {getApiBase} from './config.js';
+import {getApiBase, isLocalAuth} from './config.js';
 
 const API_BASE = getApiBase();
 console.log('API_BASE:', API_BASE);
@@ -72,7 +72,22 @@ const getAuthProvider = () => {
 }
 
 
+// The backend's local account, in the shape the other providers answer with.
+export const toPrincipal = (me) => ({
+    "clientPrincipal": {
+        "identityProvider": "local",
+        "userId": me.username,
+        "userDetails": me.username,
+        "userRoles": me.groups || []
+    }
+});
+
 export const login = async() => {
+    if (isLocalAuth()) {
+        // rejects (401) when not signed in: the console then shows the login page
+        const response = await instance.get('/me');
+        return toPrincipal(response.data);
+    }
     const authProvider = getAuthProvider();
     console.log(`login on ${import.meta.env.MODE} using ${authProvider} auth`)
 
@@ -135,6 +150,10 @@ export const login = async() => {
 }
 
 export const logout = async() => {
+    if (isLocalAuth()) {
+        await instance.post('/auth/logout');
+        return { success: true };
+    }
     const authProvider = getAuthProvider();
 
     if (authProvider === 'azure') {

@@ -5,7 +5,10 @@ import Sidebar from "./sidebar/Sidebar.jsx";
 import AuditListPage from "./audits/pages/AuditListPage.jsx";
 import DetailsPage from "./audits/pages/DetailsPage.jsx";
 import DomainEnv from "./components/DomainEnv.jsx";
-import {login} from "./services/api.js";
+import {login, logout, toPrincipal} from "./services/api.js";
+import {isLocalAuth} from "./services/config.js";
+import LoginPage from "./account/LoginPage.jsx";
+import TenantPage from "./account/TenantPage.jsx";
 import FeatureFlippingPage from "./feature-flipping/feature.jsx";
 import AppIdDashboard from "./home/Home.jsx";
 import HealthIndicatorsDashboard from "./health/Health.jsx";
@@ -23,8 +26,16 @@ function App() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState('');
     const [configIndex, setConfigIndex] = useState(0);
+    // local accounts: the user sees no manifest yet (no tenant)
+    const [noManifests, setNoManifests] = useState(false);
+    const localAuth = isLocalAuth();
 
     useEffect(() => {
+        if (localAuth) {
+            // GET /me: 401 when not signed in, the login page is shown then
+            login().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
+            return;
+        }
         // Check if user is stored from OAuth callback
         const storedUser = localStorage.getItem('cognito_user');
         if (storedUser) {
@@ -74,6 +85,12 @@ function App() {
 
     if (loading) return <div>Loading ...</div>;
 
+    if (localAuth && !user) {
+        return <LoginPage onSignedIn={me => setUser(toPrincipal(me))}/>;
+    }
+
+    const signOut = () => logout().finally(() => window.location.assign('/'));
+
     return (
         <BrowserRouter>
         <div className="App">
@@ -85,7 +102,8 @@ function App() {
                     }
                     <div>
                         <div className="flex justify-end p-2">
-                            <DomainEnv domainEnvChanged={onDomainEnvChanged} onConfigLoaded={onConfigLoaded} selectedIndex={configIndex} onSelectedIndex={setConfigIndex} />
+                            <DomainEnv domainEnvChanged={onDomainEnvChanged} onConfigLoaded={onConfigLoaded} selectedIndex={configIndex} onSelectedIndex={setConfigIndex}
+                                       onEmpty={localAuth ? () => setNoManifests(true) : undefined} />
                         </div>
                         <div className='screens-section-container'>
                             <Routes>
@@ -107,10 +125,13 @@ function App() {
                                                     <Route path='/cache' element={<CachePage domain={domain} env={env} />} />
                                                     <Route path='/manifest' element={<ManifestPage />} />
                                                     <Route path='/settings' element={<SettingsPage />} />
+                                                    {localAuth && <Route path='/tenant' element={<TenantPage />} />}
                                                     <Route path="*" element={<Navigate to="/home" replace={true}/>}/>
                                                 </Routes>
                                             </div>
                                         </div>
+                                    ) : noManifests ? (
+                                        <TenantPage onboarding={true} onLogout={signOut} />
                                     ) : (
                                         <div className="flex items-center justify-center min-h-screen">
                                             <div>Loading...</div>

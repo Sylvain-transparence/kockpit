@@ -61,6 +61,13 @@ public class UserRepository {
                 .update();
     }
 
+    public void removeGroup(UUID userId, String group) {
+        jdbc.sql("delete from user_groups where user_id = :id and group_name = :group")
+                .param("id", userId)
+                .param("group", group)
+                .update();
+    }
+
     public void setEnabled(UUID userId, boolean enabled) {
         jdbc.sql("update users set enabled = :enabled where id = :id")
                 .param("id", userId)

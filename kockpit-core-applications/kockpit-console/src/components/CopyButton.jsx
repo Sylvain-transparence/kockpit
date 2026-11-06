@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 
-function CopyButton({ value }) {
+function CopyButton({ value, label = "Copy URL" }) {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = async () => {
@@ -21,8 +21,8 @@ function CopyButton({ value }) {
             type="button"
             onClick={handleCopy}
             className="ml-2 p-1 rounded hover:bg-gray-200 focus:outline-none"
-            title="Copy URL"
-            aria-label="Copy URL"
+            title={copied ? "Copied" : label}
+            aria-label={copied ? "Copied" : label}
         >
             {copied ? (
                 <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

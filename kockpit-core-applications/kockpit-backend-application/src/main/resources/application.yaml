@@ -55,6 +55,14 @@ kockpit:
     cors:
       allowed-origins: ${KOCKPIT_CORS_ALLOWED_ORIGINS:*}
 
+  # Self-service tenants and API keys, with local accounts (kockpit.security.local.enabled)
+  tenants:
+    max-per-user: ${KOCKPIT_TENANTS_PER_USER:1}
+    max-keys-per-tenant: ${KOCKPIT_KEYS_PER_TENANT:3}
+    default-daily-quota: ${KOCKPIT_DEFAULT_DAILY_QUOTA:10000}
+    max-envs: ${KOCKPIT_TENANT_MAX_ENVS:3}
+    default-envs: ${KOCKPIT_TENANT_DEFAULT_ENVS:dev}
+
   # backend services
   backend:
     opensearch:

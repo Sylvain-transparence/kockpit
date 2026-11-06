@@ -20,5 +20,11 @@ if [ ! -z "$FEATURE_FLIPPING_REFRESH_MS" ] && [ -f "/usr/share/nginx/html/config
   sed -i "s|\${FEATURE_FLIPPING_REFRESH_MS}|$FEATURE_FLIPPING_REFRESH_MS|g" /usr/share/nginx/html/config.js
 fi
 
+if [ -f "/usr/share/nginx/html/config.js" ]; then
+  echo "Auth mode: ${AUTH_MODE:-default}, ingestion gateway: ${INGEST_URL:-not set}"
+  sed -i "s|\${AUTH_MODE}|$AUTH_MODE|g" /usr/share/nginx/html/config.js
+  sed -i "s|\${INGEST_URL}|$INGEST_URL|g" /usr/share/nginx/html/config.js
+fi
+
 # Start the passed command (nginx)
 exec "$@"

@@ -56,6 +56,12 @@
             <artifactId>kockpit-backend-authentication-local</artifactId>
             <version>1.2.0-SNAPSHOT</version>
         </dependency>
+        <!-- with local accounts: self-service tenants and API keys -->
+        <dependency>
+            <groupId>org.kockpit</groupId>
+            <artifactId>kockpit-backend-tenants</artifactId>
+            <version>1.2.0-SNAPSHOT</version>
+        </dependency>
         <!-- Opensearch services -->
         <dependency>
             <groupId>org.kockpit</groupId>

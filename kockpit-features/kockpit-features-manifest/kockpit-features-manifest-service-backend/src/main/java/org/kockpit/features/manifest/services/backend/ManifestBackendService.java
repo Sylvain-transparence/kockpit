@@ -7,6 +7,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -39,6 +40,8 @@ public class ManifestBackendService implements InitializingBean, DisposableBean 
 
     private ScheduledExecutorService refresher;
 
+    private ApplicationEventPublisher eventPublisher;
+
     @Autowired
     public ManifestBackendService(
             ManifestBackendRepository manifestBackendRepository,
@@ -53,6 +56,11 @@ public class ManifestBackendService implements InitializingBean, DisposableBean 
 
     public ManifestBackendService(ManifestBackendRepository manifestBackendRepository) {
         this(manifestBackendRepository, DEFAULT_REFRESH);
+    }
+
+    @Autowired(required = false)
+    public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -102,14 +110,21 @@ public class ManifestBackendService implements InitializingBean, DisposableBean 
         return loaded;
     }
 
-    Optional<ManifestDto> get(String name) {
+    public Optional<ManifestDto> get(String name) {
         return manifestBackendRepository.findByName(name);
     }
 
-    ManifestDto save(ManifestDto manifestDto) {
+    /**
+     * Stores the manifest, no access check: {@link ManifestApi} checks the caller first, tenant
+     * provisioning saves the manifests it generates.
+     */
+    public ManifestDto save(ManifestDto manifestDto) {
         ManifestDto saved = manifestBackendRepository.save(manifestDto);
         generation.incrementAndGet();
         cached = null;
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new ManifestSavedEvent(saved != null ? saved : manifestDto));
+        }
         return saved;
     }
 
