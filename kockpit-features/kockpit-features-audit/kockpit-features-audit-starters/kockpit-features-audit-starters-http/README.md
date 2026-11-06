@@ -29,6 +29,21 @@ kockpit:
 
 The application fails to start when `kockpit.gateway.url` or `kockpit.gateway.api-key` is missing.
 
+Optional: with the `build-info` goal of `spring-boot-maven-plugin`, the audits also carry the application's artifact
+and version (empty without it):
+
+```xml
+<plugin>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-maven-plugin</artifactId>
+    <executions>
+        <execution>
+            <goals><goal>build-info</goal></goals>
+        </execution>
+    </executions>
+</plugin>
+```
+
 ## What happens to the audits
 
 Audits are buffered (`kockpit.audit.notification.*`, as with the other starters) and sent as gzip

@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kockpit.audit.api.*;
 import org.kockpit.audit.obfuscate.AuditObfuscationSettings;
 import org.kockpit.sdk.SdkApplicationProperties;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -40,17 +41,19 @@ class AuditAutoConfiguration {
     return new AuditTraceNotificationService();
   }
 
+  // BuildProperties exists only when the app's build runs spring-boot-maven-plugin's build-info
+  // goal: optional, the audits then carry no version / artifact
   @Bean
   AuditorService auditor(
           SdkApplicationProperties sdkApplicationProperties,
-          BuildProperties buildProperties,
+          ObjectProvider<BuildProperties> buildProperties,
           NotificationAuditReportManager notificationAuditReportManager,
           @Value("${kockpit.audit.ttl_default_in_days:5}") Integer defaultAuditTtl) {
     return new KockpitAuditor(
         sdkApplicationProperties.getDomain(),
         sdkApplicationProperties.getEnv(),
         sdkApplicationProperties.getAppId(),
-        buildProperties,
+        buildProperties.getIfAvailable(),
         notificationAuditReportManager,
         defaultAuditTtl);
   }

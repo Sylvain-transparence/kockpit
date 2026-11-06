@@ -313,7 +313,9 @@ const UsageSnippet = ({tenant, ingestUrl}) => {
     <groupId>org.kockpit</groupId>
     <artifactId>kockpit-core-communication-http</artifactId>
     <version>1.2.0-SNAPSHOT</version>
-</dependency>`;
+</dependency>
+<!-- optional: the audits carry your app's version (spring-boot-maven-plugin) -->
+<!-- <executions><execution><goals><goal>build-info</goal></goals></execution></executions> -->`;
     const yaml = `kockpit:
   domain: ${tenant.domain}
   env: ${tenant.envs[0] ?? 'dev'}          # one of: ${tenant.envs.join(', ')}
