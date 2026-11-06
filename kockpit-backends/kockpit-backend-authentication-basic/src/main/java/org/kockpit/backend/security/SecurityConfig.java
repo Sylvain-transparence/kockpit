@@ -4,6 +4,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -46,8 +47,9 @@ import java.util.List;
 @Slf4j
 public class SecurityConfig {
 
-    // The console's Cognito login (Lambda@Edge, lambda-auth.js) keeps the ID token in this cookie.
-    static final String ID_TOKEN_COOKIE = "id_token";
+    // The console's Cognito login (Lambda@Edge, lambda-auth.js) keeps the ID token in this cookie;
+    // so does the local accounts login (kockpit-backend-authentication-local).
+    public static final String ID_TOKEN_COOKIE = "id_token";
 
     @Value("${kockpit.username:user}")
     private String username;
@@ -69,7 +71,9 @@ public class SecurityConfig {
     @Value("${kockpit.security.cognito.groups-claim:custom:adgroups,cognito:groups}")
     private String groupsClaim;
 
+    // Not with local accounts (kockpit.security.local.enabled), whose module brings its own chain.
     @Bean
+    @ConditionalOnProperty(name = "kockpit.security.local.enabled", havingValue = "false", matchIfMissing = true)
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(AbstractHttpConfigurer::disable)
@@ -128,7 +132,7 @@ public class SecurityConfig {
     }
 
     // "Authorization: Bearer <id token>" first, else the console's id_token cookie.
-    static BearerTokenResolver bearerOrCookieTokenResolver() {
+    public static BearerTokenResolver bearerOrCookieTokenResolver() {
         DefaultBearerTokenResolver header = new DefaultBearerTokenResolver();
         return (HttpServletRequest request) -> {
             String token = header.resolve(request);

@@ -23,9 +23,10 @@ import java.util.stream.Collectors;
  * authorities, mapped from the token's "custom:adgroups" by the security configuration.
  *
  * <p>Access control is on when {@code kockpit.security.access-control.enabled} is true, or, when
- * that property isn't set, when Cognito authentication is configured
- * ({@code kockpit.security.cognito.issuer-uri}): without a trusted identity (local runs, basic
- * auth) everything stays visible as before.
+ * that property isn't set, when there is a trusted identity: Cognito authentication
+ * ({@code kockpit.security.cognito.issuer-uri}) or local accounts
+ * ({@code kockpit.security.local.enabled}). Without one (local runs, basic auth) everything stays
+ * visible as before.
  *
  * <p>With access control on:
  * <ul>
@@ -57,12 +58,13 @@ public class ManifestAccessService {
             @Value("${kockpit.security.cognito.issuer-uri:}") String cognitoIssuerUri,
             @Value("${kockpit.security.access-control.enabled:}") String accessControlEnabled,
             @Value("${kockpit.security.access-control.admin-groups:}") String adminGroups,
-            @Value("${kockpit.security.access-control.hide-unrestricted:false}") boolean hideUnrestricted
+            @Value("${kockpit.security.access-control.hide-unrestricted:false}") boolean hideUnrestricted,
+            @Value("${kockpit.security.local.enabled:false}") boolean localAccounts
     ) {
         this.manifestBackendService = manifestBackendService;
         this.enabled = StringUtils.hasText(accessControlEnabled)
                 ? Boolean.parseBoolean(accessControlEnabled.trim())
-                : StringUtils.hasText(cognitoIssuerUri);
+                : StringUtils.hasText(cognitoIssuerUri) || localAccounts;
         this.adminGroups = parseGroups(adminGroups);
         this.hideUnrestricted = hideUnrestricted;
         if (enabled) {
@@ -71,6 +73,11 @@ public class ManifestAccessService {
         } else {
             log.info("Manifest access control by user groups: disabled");
         }
+    }
+
+    public ManifestAccessService(ManifestBackendService manifestBackendService, String cognitoIssuerUri,
+                                 String accessControlEnabled, String adminGroups, boolean hideUnrestricted) {
+        this(manifestBackendService, cognitoIssuerUri, accessControlEnabled, adminGroups, hideUnrestricted, false);
     }
 
     public ManifestAccessService(ManifestBackendService manifestBackendService, String cognitoIssuerUri) {

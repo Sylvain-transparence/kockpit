@@ -15,6 +15,7 @@
 	</properties>
 	<modules>
         <module>kockpit-backend-authentication-basic</module>
+        <module>kockpit-backend-authentication-local</module>
         <module>kockpit-backend-service-search</module>
         <module>kockpit-backend-service-dashboard</module>
     </modules>

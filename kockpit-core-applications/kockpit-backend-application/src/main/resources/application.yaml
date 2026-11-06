@@ -29,6 +29,32 @@ kockpit:
   env: local
   appId: ${spring.application.name}
 
+  security:
+    # Local accounts (signup/login in the console) in PostgreSQL, instead of Cognito or an open API.
+    # Turns manifest access control on; list the admin group in access-control.admin-groups.
+    local:
+      enabled: ${KOCKPIT_LOCAL_AUTH_ENABLED:false}
+      # at least 32 bytes, the same on every replica
+      jwt-secret: ${KOCKPIT_JWT_SECRET:}
+      cookie-secure: ${KOCKPIT_COOKIE_SECURE:true}
+      datasource:
+        url: ${KOCKPIT_DB_URL:jdbc:postgresql://localhost:5432/kockpit}
+        username: ${KOCKPIT_DB_USERNAME:kockpit}
+        password: ${KOCKPIT_DB_PASSWORD:}
+      # created at startup when absent
+      admin:
+        email: ${KOCKPIT_ADMIN_EMAIL:}
+        password: ${KOCKPIT_ADMIN_PASSWORD:}
+      signup:
+        enabled: ${KOCKPIT_SIGNUP_ENABLED:true}
+    access-control:
+      # empty: on with Cognito or local accounts, off otherwise
+      enabled: ${KOCKPIT_ACCESS_CONTROL_ENABLED:}
+      admin-groups: ${KOCKPIT_ADMIN_GROUPS:}
+      hide-unrestricted: ${KOCKPIT_HIDE_UNRESTRICTED_MANIFESTS:false}
+    cors:
+      allowed-origins: ${KOCKPIT_CORS_ALLOWED_ORIGINS:*}
+
   # backend services
   backend:
     opensearch:
