@@ -1,0 +1,10 @@
+# Images built from your working copy and loaded into kind (see README.md), instead of the
+# ghcr.io/mahieddine-ichir/kockpit/*:latest ones. Add it after values-kind.yaml.
+image:
+  registry: kockpit-local
+  tag: dev
+  pullPolicy: IfNotPresent  # the images exist only in the cluster: never pull them
+backend:     { image: backend-filesystem }
+console:     { image: console }
+gateway:     { image: gateway }
+auditStream: { image: audit-stream-kafka }

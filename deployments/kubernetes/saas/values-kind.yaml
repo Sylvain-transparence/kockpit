@@ -1,0 +1,15 @@
+# Kockpit SaaS (authenticated) profile on a local kind cluster: on top of the chart's values-public.yaml
+# (accounts, tenants, API keys, ingestion gateway), what kind lacks or can't afford:
+# no ingress controller (port-forward instead), less memory for OpenSearch.
+# See README.md in this directory.
+ingress:
+  enabled: false            # no ingress controller on kind: port-forward instead
+auth:
+  local:
+    adminEmail: admin@kockpit.test
+opensearch:
+  javaOpts: "-Xms512m -Xmx512m"
+  persistence: { size: 5Gi }
+  resources:
+    requests: { cpu: 200m, memory: 1Gi }
+    limits: { memory: 1536Mi }

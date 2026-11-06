@@ -91,6 +91,7 @@ helm upgrade --install kockpit deployments/kubernetes/kockpit -n kockpit --creat
 ```
 
 On a single EC2 instance with k3s, Traefik and Let's Encrypt: [`deployments/ec2`](../../ec2/README.md).
+On a local kind cluster (port-forward, optionally your own images): [`deployments/kubernetes/saas`](../saas/README.md).
 
 ## Uninstall
 
