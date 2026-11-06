@@ -29,6 +29,12 @@ public class TenantException extends RuntimeException {
         return new TenantException(HttpStatus.CONFLICT, error, message);
     }
 
+    // unknown, used, cancelled or expired: the same answer for all
+    static TenantException invalidInvitation() {
+        return new TenantException(HttpStatus.NOT_FOUND, "invalid_invitation",
+                "This invitation is invalid, already used or expired: ask the tenant's owner for a new one");
+    }
+
     static TenantException forbidden(String message) {
         return new TenantException(HttpStatus.FORBIDDEN, "forbidden", message);
     }

@@ -21,9 +21,14 @@ public final class ApiKeys {
     }
 
     public static String generate() {
+        return generate(PREFIX);
+    }
+
+    /** {@code prefix} + 43 base64url chars (256 random bits): API keys, invitation codes. */
+    static String generate(String prefix) {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
-        return PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        return prefix + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     public static String displayPrefix(String key) {

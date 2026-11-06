@@ -1,13 +1,19 @@
 import React, {useEffect, useState} from "react";
-import {AlertTriangle, Ban, Building2, CheckCircle2, Clock, KeyRound, LogOut, Plus, ShieldCheck} from "lucide-react";
+import {AlertTriangle, Ban, Building2, CheckCircle2, Clock, Crown, KeyRound, Link2, LogOut, Plus, ShieldCheck, UserMinus, UserPlus, Users} from "lucide-react";
 import CopyButton from "../components/CopyButton.jsx";
 import {getIngestUrl} from "../services/config.js";
 import {
+    cancelInvitation,
     createApiKey,
+    createInvitation,
     createTenant,
     getAllTenants,
+    getInvitations,
+    getMembers,
     getTenants,
+    invitationLink,
     reasonOf,
+    removeMember,
     revokeApiKey,
     setApiKeyQuota
 } from "../services/tenantApi.js";
@@ -91,8 +97,9 @@ const CreateTenant = ({limits, onCreated}) => {
     return (
         <Card title="Create your tenant" icon={<Building2 className="h-5 w-5"/>}>
             <p className="text-sm text-slate-600 mb-4">
-                A tenant is the domain your applications send their audits to. Only you (and the administrators)
-                see its audits. You can create {limits?.tenants ?? 1} tenant(s).
+                A tenant is the domain your applications send their audits to. Only you, the members you invite and the
+                administrators see its audits. You can create {limits?.tenants ?? 1} tenant(s). Invited to someone else's
+                tenant? Open the invitation link you received instead.
             </p>
             <form onSubmit={submit} className="space-y-4 max-w-md">
                 <label className="block">
@@ -140,7 +147,7 @@ const NewKey = ({created, onDone}) => (
     </div>
 );
 
-const KeyRow = ({apiKey, onRevoke, admin, onQuota}) => {
+const KeyRow = ({apiKey, onRevoke, admin, onQuota, canManage}) => {
     const [confirming, setConfirming] = useState(false);
     const [quota, setQuota] = useState(String(apiKey.dailyQuota));
     return (
@@ -162,7 +169,7 @@ const KeyRow = ({apiKey, onRevoke, admin, onQuota}) => {
             </td>
             <td className="py-3 pr-4 text-sm text-slate-600">{formatDate(apiKey.lastUsedAt)}</td>
             <td className="py-3 text-right whitespace-nowrap">
-                {apiKey.active && (confirming ? (
+                {canManage && apiKey.active && (confirming ? (
                     <span className="inline-flex items-center gap-2 text-sm">
                         Revoke it?
                         <button onClick={() => onRevoke(apiKey)} className="px-2 py-1 rounded bg-slate-800 text-white font-semibold">Yes, revoke</button>
@@ -179,7 +186,7 @@ const KeyRow = ({apiKey, onRevoke, admin, onQuota}) => {
     );
 };
 
-const KeysTable = ({tenant, admin, onChanged, setError}) => {
+const KeysTable = ({tenant, admin, canManage, onChanged, setError}) => {
     const revoke = async (apiKey) => {
         try {
             await revokeApiKey(tenant.slug, apiKey.id);
@@ -214,7 +221,7 @@ const KeysTable = ({tenant, admin, onChanged, setError}) => {
                 </thead>
                 <tbody>
                 {tenant.apiKeys.map(k => (
-                    <KeyRow key={k.id} apiKey={k} admin={admin} onRevoke={revoke} onQuota={changeQuota}/>
+                    <KeyRow key={k.id} apiKey={k} admin={admin} canManage={canManage} onRevoke={revoke} onQuota={changeQuota}/>
                 ))}
                 </tbody>
             </table>
@@ -229,6 +236,8 @@ const TenantCard = ({tenant, limits, admin, onChanged}) => {
     const ingestUrl = getIngestUrl();
     const activeKeys = tenant.apiKeys.filter(k => k.active).length;
     const keyLimit = limits?.keysPerTenant ?? 3;
+    // members see the tenant and its keys; its owner (and administrators) manage them
+    const canManage = admin || tenant.role !== 'member';
 
     const addKey = async (e) => {
         e.preventDefault();
@@ -243,7 +252,8 @@ const TenantCard = ({tenant, limits, admin, onChanged}) => {
     };
 
     return (
-        <Card title={<>Tenant <span className="font-mono">{tenant.slug}</span></>} icon={<Building2 className="h-5 w-5"/>}>
+        <Card title={<>Tenant <span className="font-mono">{tenant.slug}</span></>} icon={<Building2 className="h-5 w-5"/>}
+              actions={<RoleBadge owner={tenant.role !== 'member'}/>}>
             <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm mb-6">
                 <div>
                     <dt className="text-slate-500">Domain (in your apps' configuration)</dt>
@@ -269,7 +279,11 @@ const TenantCard = ({tenant, limits, admin, onChanged}) => {
                 <KeyRound className="h-4 w-4"/> API keys <span className="text-sm font-normal text-slate-500">({activeKeys} of {keyLimit} active)</span>
             </h3>
             {created && <NewKey created={created} onDone={() => setCreated(null)}/>}
-            <KeysTable tenant={tenant} admin={admin} onChanged={onChanged} setError={setError}/>
+            <KeysTable tenant={tenant} admin={admin} canManage={canManage} onChanged={onChanged} setError={setError}/>
+            {!canManage && (
+                <p className="text-sm text-slate-600 mt-3">You are a member of this tenant: its owner creates and revokes the keys.</p>
+            )}
+            {canManage && <>
             <form onSubmit={addKey} className="flex items-end gap-2 mt-4">
                 <label className="flex flex-col">
                     <span className="text-sm font-medium text-slate-700">New key name</span>
@@ -284,9 +298,214 @@ const TenantCard = ({tenant, limits, admin, onChanged}) => {
             {activeKeys >= keyLimit && (
                 <p className="text-xs text-slate-600 mt-1">Key limit reached: revoke a key to create another one.</p>
             )}
+            </>}
             <ErrorBox message={error}/>
+            <Members tenant={tenant} limits={limits} canManage={canManage} onChanged={onChanged}/>
             <UsageSnippet tenant={tenant} ingestUrl={ingestUrl}/>
         </Card>
+    );
+};
+
+
+// Owner or member: in words and an icon, not a colour.
+const RoleBadge = ({owner}) => (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 border border-slate-400 rounded-full px-2 py-0.5">
+        {owner ? <Crown className="h-3.5 w-3.5" aria-hidden="true"/> : <Users className="h-3.5 w-3.5" aria-hidden="true"/>}
+        {owner ? 'Owner' : 'Member'}
+    </span>
+);
+
+// The invitation link, shown once, right after its creation.
+const NewInvitation = ({created, onDone}) => {
+    const link = invitationLink(created.code);
+    return (
+        <div className="border-2 border-slate-800 rounded-lg p-4 mb-4 bg-slate-50" role="status">
+            <p className="font-semibold text-slate-800 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" aria-hidden="true"/>
+                Send this link {created.email ? <>to <span className="font-mono">{created.email}</span></> : 'to the person you invite'} now: it won't be shown again.
+            </p>
+            <div className="flex items-center mt-2">
+                <code className="flex-1 font-mono text-sm bg-white border border-slate-300 rounded px-3 py-2 break-all">{link}</code>
+                <CopyButton value={link} label="Copy the invitation link"/>
+            </div>
+            <p className="text-xs text-slate-600 mt-2">
+                One use, until {formatDate(created.expiresAt)}{created.email ? `, for ${created.email} only` : ', for whoever opens it first'}.
+            </p>
+            <button onClick={onDone} className="mt-3 px-3 py-1.5 rounded-lg border border-slate-400 text-sm hover:bg-slate-100">
+                I've sent it
+            </button>
+        </div>
+    );
+};
+
+const MemberRow = ({member, canManage, onRemove}) => {
+    const [confirming, setConfirming] = useState(false);
+    const leaving = member.you;
+    const removable = !member.owner && (canManage || leaving);
+    return (
+        <tr className="border-t border-slate-100">
+            <td className="py-2 pr-4 text-sm font-mono text-slate-800">
+                {member.email}{member.you && <span className="ml-2 font-sans text-xs text-slate-500">(you)</span>}
+            </td>
+            <td className="py-2 pr-4"><RoleBadge owner={member.owner}/></td>
+            <td className="py-2 pr-4 text-sm text-slate-600">{formatDate(member.joinedAt)}</td>
+            <td className="py-2 text-right whitespace-nowrap">
+                {removable && (confirming ? (
+                    <span className="inline-flex items-center gap-2 text-sm">
+                        {leaving ? 'Leave the tenant?' : 'Remove this member?'}
+                        <button onClick={() => onRemove(member)} className="px-2 py-1 rounded bg-slate-800 text-white font-semibold">
+                            {leaving ? 'Yes, leave' : 'Yes, remove'}
+                        </button>
+                        <button onClick={() => setConfirming(false)} className="px-2 py-1 rounded border border-slate-400">Cancel</button>
+                    </span>
+                ) : (
+                    <button onClick={() => setConfirming(true)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-400 text-sm hover:bg-slate-100">
+                        <UserMinus className="h-4 w-4" aria-hidden="true"/> {leaving ? 'Leave' : 'Remove'}
+                    </button>
+                ))}
+            </td>
+        </tr>
+    );
+};
+
+const Members = ({tenant, limits, canManage, onChanged}) => {
+    const [members, setMembers] = useState(null);
+    const [invitations, setInvitations] = useState([]);
+    const [email, setEmail] = useState('');
+    const [created, setCreated] = useState(null);
+    const [error, setError] = useState(null);
+
+    const load = async () => {
+        try {
+            setMembers(await getMembers(tenant.slug));
+            setInvitations(canManage ? await getInvitations(tenant.slug) : []);
+        } catch (err) {
+            setError(reasonOf(err));
+        }
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { load(); }, [tenant.slug, canManage]);
+
+    const invite = async (e) => {
+        e.preventDefault();
+        setError(null);
+        try {
+            setCreated(await createInvitation(tenant.slug, email.trim()));
+            setEmail('');
+            load();
+        } catch (err) {
+            setError(reasonOf(err));
+        }
+    };
+
+    const remove = async (member) => {
+        setError(null);
+        try {
+            await removeMember(tenant.slug, member.userId);
+            if (member.you) {
+                // left the tenant: the console no longer shows it
+                window.location.assign('/');
+                return;
+            }
+            load();
+            onChanged();
+        } catch (err) {
+            setError(reasonOf(err));
+        }
+    };
+
+    const cancel = async (invitation) => {
+        setError(null);
+        try {
+            await cancelInvitation(tenant.slug, invitation.id);
+            load();
+        } catch (err) {
+            setError(reasonOf(err));
+        }
+    };
+
+    const maxMembers = limits?.members ?? 20;
+    const full = members && members.length >= maxMembers;
+    const tooManyOpen = invitations.length >= (limits?.openInvitations ?? 5);
+
+    return (
+        <div className="mt-6 border-t border-slate-200 pt-4">
+            <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2 mb-3">
+                <Users className="h-4 w-4" aria-hidden="true"/> Members
+                {members && <span className="text-sm font-normal text-slate-500">({members.length} of {maxMembers})</span>}
+            </h3>
+            <p className="text-sm text-slate-600 mb-3">Members see the tenant's audits and keys. Only the owner creates keys and manages the members.</p>
+            {members && (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                        <tr className="text-xs uppercase text-slate-500">
+                            <th className="pb-2 pr-4">Account</th>
+                            <th className="pb-2 pr-4">Role</th>
+                            <th className="pb-2 pr-4">Since</th>
+                            <th className="pb-2"><span className="sr-only">Actions</span></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {members.map(m => <MemberRow key={m.userId} member={m} canManage={canManage} onRemove={remove}/>)}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {canManage && <>
+                <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mt-5 mb-2">
+                    <UserPlus className="h-4 w-4" aria-hidden="true"/> Invite someone
+                </h4>
+                {created && <NewInvitation created={created} onDone={() => setCreated(null)}/>}
+                <form onSubmit={invite} className="flex flex-wrap items-end gap-2">
+                    <label className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-700">Their email (optional)</span>
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} maxLength={254} placeholder="only this account may accept"
+                               className="mt-1 w-72 rounded-lg border border-slate-400 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400"/>
+                    </label>
+                    <button type="submit" disabled={full || tooManyOpen}
+                            className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold hover:bg-slate-900 disabled:opacity-50">
+                        <Link2 className="h-4 w-4" aria-hidden="true"/> Create an invitation link
+                    </button>
+                </form>
+                <p className="text-xs text-slate-600 mt-1">
+                    {full ? 'Member limit reached: remove a member to invite someone.' :
+                        tooManyOpen ? 'Too many open invitations: cancel one to create another.' :
+                            `Kockpit sends no email: you send the link. It works once, for ${limits?.invitationTtlDays ?? 7} days.`}
+                </p>
+                {invitations.length > 0 && (
+                    <div className="overflow-x-auto mt-3">
+                        <table className="w-full text-left">
+                            <thead>
+                            <tr className="text-xs uppercase text-slate-500">
+                                <th className="pb-2 pr-4">Open invitation for</th>
+                                <th className="pb-2 pr-4">Expires</th>
+                                <th className="pb-2"><span className="sr-only">Actions</span></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {invitations.map(i => (
+                                <tr key={i.id} className="border-t border-slate-100">
+                                    <td className="py-2 pr-4 text-sm text-slate-800">{i.email ? <span className="font-mono">{i.email}</span> : 'anyone with the link'}</td>
+                                    <td className="py-2 pr-4 text-sm text-slate-600">{formatDate(i.expiresAt)}</td>
+                                    <td className="py-2 text-right">
+                                        <button onClick={() => cancel(i)}
+                                                className="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-400 text-sm hover:bg-slate-100">
+                                            <Ban className="h-4 w-4" aria-hidden="true"/> Cancel
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </>}
+            <ErrorBox message={error}/>
+        </div>
     );
 };
 

@@ -22,7 +22,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -133,16 +132,6 @@ public class TenantService {
 
     public String ownerEmail(Tenant tenant) {
         return tenants.ownerEmail(tenant.ownerId());
-    }
-
-    /** The tenant, if the user may manage it: a member (its group) or an administrator. */
-    public Tenant manageable(UUID userId, boolean admin, String slug) {
-        Optional<Tenant> tenant = TenantNames.isValidSlug(slug) ? tenants.findBySlug(slug) : Optional.empty();
-        // no difference between "doesn't exist" and "not yours"
-        return tenant
-                .filter(t -> admin || t.ownerId().equals(userId)
-                        || users.groups(userId).contains(TenantNames.group(t.slug())))
-                .orElseThrow(() -> TenantException.notFound("No tenant " + slug));
     }
 
     public CreatedKey createKey(Tenant tenant, String name) {

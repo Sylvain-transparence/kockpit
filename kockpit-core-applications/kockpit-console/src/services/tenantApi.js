@@ -23,6 +23,30 @@ export const createApiKey = async (slug, name) =>
 export const revokeApiKey = async (slug, id) =>
     instance.delete(`/tenants/${encodeURIComponent(slug)}/api-keys/${encodeURIComponent(id)}`);
 
+// Members and invitations: the invitation code only ever travels in request bodies
+const tenantPath = (slug) => `/tenants/${encodeURIComponent(slug)}`;
+
+export const getMembers = async (slug) => (await instance.get(`${tenantPath(slug)}/members`)).data;
+
+export const removeMember = async (slug, userId) =>
+    instance.delete(`${tenantPath(slug)}/members/${encodeURIComponent(userId)}`);
+
+// the only response that holds the code itself
+export const createInvitation = async (slug, email) =>
+    (await instance.post(`${tenantPath(slug)}/invitations`, {email: email || null})).data;
+
+export const getInvitations = async (slug) => (await instance.get(`${tenantPath(slug)}/invitations`)).data;
+
+export const cancelInvitation = async (slug, id) =>
+    instance.delete(`${tenantPath(slug)}/invitations/${encodeURIComponent(id)}`);
+
+export const previewInvitation = async (code) => (await instance.post('/invitations/preview', {code})).data;
+
+export const acceptInvitation = async (code) => (await instance.post('/invitations/accept', {code})).data;
+
+// The link to send: the code in the fragment, which browsers never send to a server (no access log keeps it)
+export const invitationLink = (code) => `${window.location.origin}/join#${code}`;
+
 export const getAllTenants = async () => (await instance.get('/admin/tenants')).data;
 
 export const setApiKeyQuota = async (id, dailyQuota) =>

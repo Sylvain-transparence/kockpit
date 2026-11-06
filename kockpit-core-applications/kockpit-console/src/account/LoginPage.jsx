@@ -3,7 +3,8 @@ import {AlertTriangle, LogIn, UserPlus} from "lucide-react";
 import {reasonOf, signin, signup} from "../services/tenantApi.js";
 
 // Sign in, or create an account, with the backend's local accounts.
-const LoginPage = ({onSignedIn}) => {
+// notice: why the user is asked to sign in (an invitation to join a tenant)
+const LoginPage = ({onSignedIn, notice}) => {
     const [mode, setMode] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -45,6 +46,9 @@ const LoginPage = ({onSignedIn}) => {
                 <div className="flex justify-center pt-8 pb-4 bg-slate-800 rounded-t-xl">
                     <img src="/kockpit-logo.png" alt="Kockpit" className="h-10"/>
                 </div>
+                {notice && (
+                    <p className="px-6 pt-4 text-sm text-slate-700">{notice}</p>
+                )}
                 <div className="flex border-b border-slate-200" role="tablist">
                     {tab('login', 'Sign in', <LogIn className="h-4 w-4" aria-hidden="true"/>)}
                     {tab('signup', 'Create an account', <UserPlus className="h-4 w-4" aria-hidden="true"/>)}

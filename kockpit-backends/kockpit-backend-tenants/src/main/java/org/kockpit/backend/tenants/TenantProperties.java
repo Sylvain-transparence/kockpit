@@ -3,6 +3,7 @@ package org.kockpit.backend.tenants;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
 import java.util.List;
 
 /** {@code kockpit.tenants.*}: self-service tenants and API keys, see {@link TenantService}. */
@@ -18,6 +19,15 @@ public class TenantProperties {
 
     /** Audits a new API key may send per UTC day; administrators can change it per key. */
     private int defaultDailyQuota = 10_000;
+
+    /** Accounts in a tenant, its owner included. */
+    private int maxMembers = 20;
+
+    /** Invitations of a tenant not yet accepted, cancelled or expired. */
+    private int maxOpenInvitations = 5;
+
+    /** How long an invitation can be accepted. */
+    private Duration invitationTtl = Duration.ofDays(7);
 
     /** Envs a tenant may declare. */
     private int maxEnvs = 3;

@@ -39,6 +39,8 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "kockpit.security.access-control.hide-unrestricted=true",
                 "kockpit.tenants.max-keys-per-tenant=2",
                 "kockpit.tenants.default-daily-quota=500",
+                "kockpit.tenants.max-open-invitations=2",
+                "kockpit.tenants.max-members=3",
         })
 @Testcontainers
 class TenantIntegrationTest {
@@ -225,6 +227,170 @@ class TenantIntegrationTest {
     void the_tenant_api_needs_a_login() throws Exception {
         assertThat(send("GET", "/tenants", null, null).statusCode()).isEqualTo(401);
         assertThat(createTenant(null, uniqueSlug()).statusCode()).isEqualTo(401);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // members and invitations
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    void an_invited_account_joins_and_sees_the_tenants_audits() throws Exception {
+        String owner = signup();
+        String slug = uniqueSlug();
+        createTenant(owner, slug);
+        String member = signup();
+        assertThat(send("GET", "/" + slug + "/dev/audits/_search", null, member).statusCode()).isEqualTo(403);
+
+        HttpResponse<String> invited = send("POST", "/tenants/" + slug + "/invitations", "{}", owner);
+
+        assertThat(invited.statusCode()).as(invited.body()).isEqualTo(201);
+        String code = json(invited).get("code").asString();
+        assertThat(code).startsWith("kpi_").hasSize(47);
+        // stored hashed only, listed without its code
+        assertThat(JdbcClient.create(dataSource).sql("select count(*) from tenant_invitations where code_hash = :h")
+                .param("h", ApiKeys.hash(code)).query(Integer.class).single()).isEqualTo(1);
+        JsonNode open = json(send("GET", "/tenants/" + slug + "/invitations", null, owner));
+        assertThat(open).hasSize(1);
+        assertThat(open.get(0).has("code")).isFalse();
+
+        JsonNode preview = json(send("POST", "/invitations/preview", codeBody(code), member));
+        assertThat(preview.get("tenant").asString()).isEqualTo(slug);
+        assertThat(preview.get("alreadyMember").asBoolean()).isFalse();
+
+        HttpResponse<String> accepted = send("POST", "/invitations/accept", codeBody(code), member);
+
+        assertThat(accepted.statusCode()).as(accepted.body()).isEqualTo(200);
+        assertThat(json(accepted).get("role").asString()).isEqualTo("member");
+        // at once, without a new login: groups are read on each request
+        assertThat(send("GET", "/" + slug + "/dev/audits/_search", null, member).statusCode()).isEqualTo(200);
+        assertThat(json(send("GET", "/manifests", null, member))).extracting(m -> m.get("domain").asString()).contains(slug);
+        JsonNode mine = json(send("GET", "/tenants", null, member)).get("tenants");
+        assertThat(mine).extracting(t -> t.get("slug").asString() + ":" + t.get("role").asString()).containsExactly(slug + ":member");
+        assertThat(json(send("GET", "/tenants", null, owner)).get("tenants").get(0).get("role").asString()).isEqualTo("owner");
+        JsonNode members = json(send("GET", "/tenants/" + slug + "/members", null, member));
+        assertThat(members).extracting(m -> m.get("owner").asBoolean()).containsExactly(true, false);
+        assertThat(members).extracting(m -> m.get("you").asBoolean()).containsExactly(false, true);
+        assertThat(send("GET", "/tenants/" + slug + "/invitations", null, owner).body()).isEqualTo("[]");
+
+        // single use
+        HttpResponse<String> reused = send("POST", "/invitations/accept", codeBody(code), signup());
+        assertThat(reused.statusCode()).isEqualTo(404);
+        assertThat(reused.body()).contains("invalid_invitation");
+    }
+
+    @Test
+    void members_see_but_only_the_owner_manages() throws Exception {
+        String owner = signup();
+        String slug = uniqueSlug();
+        createTenant(owner, slug);
+        String member = join(owner, slug, signup());
+
+        assertThat(createKey(member, slug, "mine").statusCode()).isEqualTo(403);
+        assertThat(send("POST", "/tenants/" + slug + "/invitations", "{}", member).statusCode()).isEqualTo(403);
+        assertThat(send("GET", "/tenants/" + slug + "/invitations", null, member).statusCode()).isEqualTo(403);
+        String keyId = json(createKey(owner, slug, "ci")).get("id").asString();
+        assertThat(send("DELETE", "/tenants/" + slug + "/api-keys/" + keyId, null, member).statusCode()).isEqualTo(403);
+        assertThat(json(send("GET", "/tenants", null, member)).get("tenants").get(0).get("apiKeys")).hasSize(1);
+        String ownerId = members(owner, slug).get(0).get("userId").asString();
+        assertThat(send("DELETE", "/tenants/" + slug + "/members/" + ownerId, null, member).statusCode()).isEqualTo(403);
+        assertThat(send("DELETE", "/tenants/" + slug + "/members/" + ownerId, null, owner).statusCode()).isEqualTo(409);
+
+        // the owner removes the member: no access any more, at once
+        String memberId = members(owner, slug).get(1).get("userId").asString();
+        assertThat(send("DELETE", "/tenants/" + slug + "/members/" + memberId, null, owner).statusCode()).isEqualTo(204);
+        assertThat(send("GET", "/" + slug + "/dev/audits/_search", null, member).statusCode()).isEqualTo(403);
+        assertThat(send("GET", "/tenants/" + slug + "/members", null, member).statusCode()).isEqualTo(404);
+
+        // a member may leave
+        String leaver = join(owner, slug, signup());
+        String leaverId = members(owner, slug).get(1).get("userId").asString();
+        assertThat(send("DELETE", "/tenants/" + slug + "/members/" + leaverId, null, leaver).statusCode()).isEqualTo(204);
+        assertThat(json(send("GET", "/tenants", null, leaver)).get("tenants")).isEmpty();
+        // someone else's tenant looks absent
+        assertThat(send("GET", "/tenants/" + slug + "/members", null, signup()).statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void an_invitation_for_an_email_is_for_that_account_only() throws Exception {
+        String owner = signup();
+        String slug = uniqueSlug();
+        createTenant(owner, slug);
+        String email = "invited-" + UUID.randomUUID() + "@example.com";
+        String code = json(send("POST", "/tenants/" + slug + "/invitations",
+                "{\"email\":\"%s\"}".formatted(email.toUpperCase()), owner)).get("code").asString();
+
+        HttpResponse<String> wrong = send("POST", "/invitations/accept", codeBody(code), signup());
+        assertThat(wrong.statusCode()).isEqualTo(403);
+        assertThat(wrong.body()).doesNotContain(email);
+
+        assertThat(send("POST", "/invitations/accept", codeBody(code), signupAs(email)).statusCode()).isEqualTo(200);
+        assertThat(send("POST", "/tenants/" + slug + "/invitations", "{\"email\":\"not-an-email\"}", owner).statusCode()).isEqualTo(400);
+    }
+
+    @Test
+    void cancelled_expired_and_unknown_invitations_are_refused_alike() throws Exception {
+        String owner = signup();
+        String slug = uniqueSlug();
+        createTenant(owner, slug);
+        String guest = signup();
+        JsonNode cancelled = json(send("POST", "/tenants/" + slug + "/invitations", "{}", owner));
+        assertThat(send("DELETE", "/tenants/" + slug + "/invitations/" + cancelled.get("id").asString(), null, owner).statusCode())
+                .isEqualTo(204);
+        JsonNode expired = json(send("POST", "/tenants/" + slug + "/invitations", "{}", owner));
+        JdbcClient.create(dataSource).sql("update tenant_invitations set expires_at = now() - interval '1 minute' where id = :id")
+                .param("id", UUID.fromString(expired.get("id").asString())).update();
+
+        for (String code : List.of(cancelled.get("code").asString(), expired.get("code").asString(),
+                "kpi_" + "x".repeat(43), "not-a-code")) {
+            HttpResponse<String> refused = send("POST", "/invitations/accept", codeBody(code), guest);
+            assertThat(refused.statusCode()).as(code).isEqualTo(404);
+            assertThat(refused.body()).contains("invalid_invitation");
+        }
+        assertThat(send("GET", "/" + slug + "/dev/audits/_search", null, guest).statusCode()).isEqualTo(403);
+        assertThat(send("POST", "/invitations/accept", codeBody("x"), null).statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void invitations_and_members_are_limited() throws Exception {
+        String owner = signup();
+        String slug = uniqueSlug();
+        createTenant(owner, slug);
+        String first = json(send("POST", "/tenants/" + slug + "/invitations", "{}", owner)).get("code").asString();
+        String second = json(send("POST", "/tenants/" + slug + "/invitations", "{}", owner)).get("code").asString();
+        HttpResponse<String> third = send("POST", "/tenants/" + slug + "/invitations", "{}", owner);
+        assertThat(third.statusCode()).isEqualTo(409);
+        assertThat(third.body()).contains("invitation_limit");
+
+        // max-members=3: the owner and two members
+        String withOwnTenant = signup();
+        createTenant(withOwnTenant, uniqueSlug());
+        // joining doesn't count against the tenants one may create
+        assertThat(send("POST", "/invitations/accept", codeBody(first), withOwnTenant).statusCode()).isEqualTo(200);
+        assertThat(send("POST", "/invitations/accept", codeBody(second), signup()).statusCode()).isEqualTo(200);
+        HttpResponse<String> full = send("POST", "/tenants/" + slug + "/invitations", "{}", owner);
+        assertThat(full.statusCode()).isEqualTo(409);
+        assertThat(full.body()).contains("member_limit");
+    }
+
+    private String join(String ownerCookie, String slug, String memberCookie) throws Exception {
+        String code = json(send("POST", "/tenants/" + slug + "/invitations", "{}", ownerCookie)).get("code").asString();
+        assertThat(send("POST", "/invitations/accept", codeBody(code), memberCookie).statusCode()).isEqualTo(200);
+        return memberCookie;
+    }
+
+    private JsonNode members(String cookie, String slug) throws Exception {
+        return json(send("GET", "/tenants/" + slug + "/members", null, cookie));
+    }
+
+    private static String codeBody(String code) {
+        return "{\"code\":\"%s\"}".formatted(code);
+    }
+
+    private String signupAs(String email) throws Exception {
+        HttpResponse<String> signup = send("POST", "/auth/signup",
+                "{\"email\":\"%s\",\"password\":\"a-good-password\"}".formatted(email), null);
+        assertThat(signup.statusCode()).isEqualTo(201);
+        return cookieOf(signup);
     }
 
     private String signup() throws Exception {

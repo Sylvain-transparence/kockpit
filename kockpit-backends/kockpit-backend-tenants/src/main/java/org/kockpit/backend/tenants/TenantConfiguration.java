@@ -1,6 +1,7 @@
 package org.kockpit.backend.tenants;
 
 import com.zaxxer.hikari.HikariDataSource;
+import org.kockpit.backend.security.local.AttemptLimiter;
 import org.kockpit.backend.security.local.UserRepository;
 import org.kockpit.features.manifest.services.backend.ManifestBackendService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -23,6 +24,15 @@ public class TenantConfiguration {
     @Bean
     TenantRepository tenantRepository(HikariDataSource kockpitAccountsDataSource) {
         return new TenantRepository(JdbcClient.create(kockpitAccountsDataSource));
+    }
+
+    @Bean
+    MembershipService membershipService(TenantRepository tenants, UserRepository users,
+                                        HikariDataSource kockpitAccountsDataSource, TenantProperties properties,
+                                        AttemptLimiter attemptLimiter) {
+        TransactionTemplate transaction = new TransactionTemplate(new DataSourceTransactionManager(kockpitAccountsDataSource));
+        return new MembershipService(tenants, new MembershipRepository(JdbcClient.create(kockpitAccountsDataSource)),
+                users, transaction, properties, attemptLimiter, Clock.systemUTC());
     }
 
     @Bean

@@ -62,6 +62,10 @@ kockpit:
     default-daily-quota: ${KOCKPIT_DEFAULT_DAILY_QUOTA:10000}
     max-envs: ${KOCKPIT_TENANT_MAX_ENVS:3}
     default-envs: ${KOCKPIT_TENANT_DEFAULT_ENVS:dev}
+    # members (owner included), open invitations per tenant, and how long an invitation is valid
+    max-members: ${KOCKPIT_TENANT_MAX_MEMBERS:20}
+    max-open-invitations: ${KOCKPIT_TENANT_MAX_OPEN_INVITATIONS:5}
+    invitation-ttl: ${KOCKPIT_TENANT_INVITATION_TTL:7d}
 
   # backend services
   backend:

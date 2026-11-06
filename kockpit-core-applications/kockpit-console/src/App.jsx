@@ -8,6 +8,7 @@ import DomainEnv from "./components/DomainEnv.jsx";
 import {login, logout, toPrincipal} from "./services/api.js";
 import {isLocalAuth} from "./services/config.js";
 import LoginPage from "./account/LoginPage.jsx";
+import JoinPage from "./account/JoinPage.jsx";
 import TenantPage from "./account/TenantPage.jsx";
 import FeatureFlippingPage from "./feature-flipping/feature.jsx";
 import AppIdDashboard from "./home/Home.jsx";
@@ -85,8 +86,18 @@ function App() {
 
     if (loading) return <div>Loading ...</div>;
 
+    // an invitation link (/join#<code>): sign in or sign up first, then join the tenant
+    const joining = localAuth && window.location.pathname === '/join';
+    const joinCode = joining ? decodeURIComponent(window.location.hash.replace(/^#/, '')) : null;
+
     if (localAuth && !user) {
-        return <LoginPage onSignedIn={me => setUser(toPrincipal(me))}/>;
+        return <LoginPage onSignedIn={me => setUser(toPrincipal(me))}
+                          notice={joining ? 'Sign in, or create an account, to join the tenant you are invited to.' : null}/>;
+    }
+
+    if (joining) {
+        // signed out, the same link (and its code) shows the sign-in page again
+        return <JoinPage code={joinCode} user={user} onLogout={() => logout().finally(() => window.location.reload())}/>;
     }
 
     const signOut = () => logout().finally(() => window.location.assign('/'));
