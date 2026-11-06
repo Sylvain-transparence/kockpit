@@ -1,0 +1,80 @@
+{{- if .Values.ingress.enabled }}
+{{- if and .Values.auth.local.enabled (not .Values.ingress.host) }}
+{{- fail "ingress.host is required with auth.local.enabled: the console's host, e.g. console.example.com" }}
+{{- end }}
+{{- if and .Values.gateway.enabled (not .Values.ingress.gatewayHost) }}
+{{- fail "ingress.gatewayHost is required with gateway.enabled: the gateway's host, e.g. ingest.example.com" }}
+{{- end }}
+{{- $fullname := include "kockpit.fullname" . }}
+{{- $issuer := .Values.ingress.certManagerClusterIssuer }}
+{{- $hosts := list }}
+{{- if .Values.console.enabled }}{{ $hosts = append $hosts .Values.ingress.host }}{{ end }}
+{{- if and .Values.gateway.enabled .Values.ingress.gatewayHost }}{{ $hosts = append $hosts .Values.ingress.gatewayHost }}{{ end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "kockpit.labels" (dict "root" . "name" "ingress") | nindent 4 }}
+  {{- if or .Values.ingress.annotations $issuer }}
+  annotations:
+    {{- with $issuer }}
+    cert-manager.io/cluster-issuer: {{ . | quote }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if $issuer }}
+  tls:
+    {{- range $hosts }}
+    - hosts: [{{ . | quote }}]
+      secretName: {{ printf "%s-tls-%s" $fullname (. | replace "." "-") | trunc 63 | trimSuffix "-" }}
+    {{- end }}
+  {{- else if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- if .Values.console.enabled }}
+    {{- /* an empty host matches every host name (e.g. localhost:<port>) */}}
+    - {{- with .Values.ingress.host }} host: {{ . | quote }}
+      {{- end }}
+      http:
+        paths:
+          {{- if .Values.backend.enabled }}
+          # straight to the backend: its client-IP limits see the ingress' X-Forwarded-For
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "kockpit.component" (dict "root" . "name" "backend") }}
+                port:
+                  name: http
+          {{- end }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "kockpit.component" (dict "root" . "name" "console") }}
+                port:
+                  name: http
+    {{- end }}
+    {{- if and .Values.gateway.enabled .Values.ingress.gatewayHost }}
+    # only the ingestion API: the gateway's management port stays inside the cluster
+    - host: {{ .Values.ingress.gatewayHost | quote }}
+      http:
+        paths:
+          - path: /ingest
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "kockpit.component" (dict "root" . "name" "gateway") }}
+                port:
+                  name: http
+    {{- end }}
+{{- end }}

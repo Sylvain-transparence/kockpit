@@ -6,11 +6,28 @@ Kockpit is starting in namespace {{ .Release.Namespace }}. The Java applications
 
 Open the console:
 {{- if .Values.ingress.enabled }}
-  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}
+  {{ include "kockpit.consoleOrigin" . }}
 {{- else }}
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kockpit.component" (dict "root" . "name" "console") }} 3000:{{ .Values.console.service.port }}
   then http://localhost:3000
 {{- end }}
+{{- end }}
+
+{{- if .Values.auth.local.enabled }}
+
+Accounts: sign up on the console{{ if not .Values.auth.local.signupEnabled }} (sign-up is closed: accounts exist already){{ end }}.
+{{- if .Values.auth.local.adminEmail }}
+Administrator {{ .Values.auth.local.adminEmail }}, password:
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "kockpit.secretName" . }} -o jsonpath='{.data.admin-password}' | base64 -d; echo
+{{- else }}
+No administrator (auth.local.adminEmail): nobody can see every tenant or change a key's quota.
+{{- end }}
+{{- end }}
+
+{{- with (include "kockpit.ingestUrl" .) }}
+
+Ingestion gateway (applications send audits with a tenant's API key):
+  {{ . }}/ingest/v1/audits
 {{- end }}
 
 {{- if .Values.sampleApp.enabled }}
@@ -21,7 +38,7 @@ Generate audits with the sample application:
   curl -X POST http://localhost:8082/sample-app/api/createMessage -H 'Content-Type: application/json' -d '{"message":"hello"}'
 {{- end }}
 
-{{- if .Values.opensearch.enabled }}
+{{- if and .Values.opensearch.enabled (not .Values.auth.local.enabled) }}
 
 Load the sample audits (optional), from the repository root:
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kockpit.component" (dict "root" . "name" "opensearch") }} 9200:9200

@@ -67,3 +67,36 @@ imagePullSecrets:
 {{- toYaml . | nindent 2 }}
 {{- end }}
 {{- end -}}
+
+{{/* secret holding db-password, jwt-secret and admin-password */}}
+{{- define "kockpit.secretName" -}}
+{{- .Values.auth.existingSecret | default (printf "%s-secrets" (include "kockpit.fullname" .)) -}}
+{{- end -}}
+
+{{- define "kockpit.dbUrl" -}}
+{{- printf "jdbc:postgresql://%s-postgres:5432/%s" (include "kockpit.fullname" .) .Values.postgres.database -}}
+{{- end -}}
+
+{{/* PostgreSQL connection of the backend (local accounts) and the gateway */}}
+{{- define "kockpit.dbEnv" -}}
+- { name: KOCKPIT_DB_URL, value: {{ include "kockpit.dbUrl" . | quote }} }
+- { name: KOCKPIT_DB_USERNAME, value: {{ .Values.postgres.username | quote }} }
+- name: KOCKPIT_DB_PASSWORD
+  valueFrom:
+    secretKeyRef: { name: {{ include "kockpit.secretName" . }}, key: db-password }
+{{- end -}}
+
+{{/* https when the ingress has TLS */}}
+{{- define "kockpit.scheme" -}}
+{{- if or .Values.ingress.certManagerClusterIssuer .Values.ingress.tls -}}https{{- else -}}http{{- end -}}
+{{- end -}}
+
+{{- define "kockpit.consoleOrigin" -}}
+{{- printf "%s://%s" (include "kockpit.scheme" .) .Values.ingress.host -}}
+{{- end -}}
+
+{{- define "kockpit.ingestUrl" -}}
+{{- if and .Values.ingress.enabled .Values.ingress.gatewayHost -}}
+{{- printf "%s://%s" (include "kockpit.scheme" .) .Values.ingress.gatewayHost -}}
+{{- end -}}
+{{- end -}}

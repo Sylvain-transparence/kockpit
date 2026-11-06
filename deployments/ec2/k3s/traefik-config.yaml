@@ -1,0 +1,22 @@
+# k3s' bundled Traefik, customised (applied from /var/lib/rancher/k3s/server/manifests by bootstrap.sh):
+# - externalTrafficPolicy Local: Traefik sees the client's IP, which the backend (sign-up and login limits) and the
+#   gateway (unknown API keys per IP) read from X-Forwarded-For. With the default (Cluster) every request would
+#   seem to come from the node, and one client over a limit would block everybody.
+# - plain HTTP redirected to HTTPS (Let's Encrypt's HTTP-01 challenge follows the redirect).
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    service:
+      spec:
+        externalTrafficPolicy: Local
+    ports:
+      web:
+        redirections:
+          entryPoint:
+            to: websecure
+            scheme: https
+            permanent: true

@@ -61,12 +61,43 @@ kubectl -n kockpit port-forward svc/kockpit-sample-app 8082:8082 # sample app AP
 | `sampleApp.pollInterval`               | `PT5S`       | How often the sample app reads flag and configuration values     |
 | `<component>.env`                      | `[]`         | Extra environment variables for a Kockpit application            |
 | `<component>.resources`                |              | Requests and limits                                              |
-| `ingress.enabled` / `ingress.host`     | `false`      | Ingress to the console                                           |
+| `ingress.enabled` / `ingress.host`     | `false`      | Ingress to the console (and `/api` to the backend)               |
+| `ingress.gatewayHost`                  | `""`         | Host of the ingestion gateway's `/ingest`                        |
+| `ingress.certManagerClusterIssuer`     | `""`         | cert-manager ClusterIssuer: one TLS certificate per host         |
+
+## Shared instance (accounts, tenants, API keys)
+
+`values-public.yaml` turns the quick start into an instance that external testers use from the internet:
+
+| Component  | Kind        | Image                                                       | Port |
+|------------|-------------|-------------------------------------------------------------|------|
+| `postgres` | StatefulSet | `postgres:17-alpine`: accounts, tenants, API keys, usage    | 5432 |
+| `gateway`  | Deployment  | `ghcr.io/mahieddine-ichir/kockpit/kockpit-gateway-application` | 8080 |
+
+- `auth.local.enabled`: sign-up and sign-in on the console, every user sees only their tenants' manifests,
+  the administrator (`auth.local.adminEmail`) sees everything. Requires `postgres.enabled` and an ingress host
+  (CORS is limited to the console's origin, cookies are `Secure` with TLS).
+- `gateway.enabled`: `https://<ingress.gatewayHost>/ingest/v1/...`, see the gateway's README. It shares the data
+  volume with the backend (messages) and waits for the backend to create the database tables.
+- Secrets: `<release>-secrets` holds `db-password`, `jwt-secret` and `admin-password`, random at install and kept
+  across upgrades and `helm uninstall` (with the PostgreSQL volume). Set `auth.existingSecret` to bring your own.
+- No sample app, no demo manifest, persistent Kafka and OpenSearch.
+
+```bash
+helm upgrade --install kockpit deployments/kubernetes/kockpit -n kockpit --create-namespace \
+  -f deployments/kubernetes/kockpit/values-public.yaml \
+  --set ingress.host=console.example.com --set ingress.gatewayHost=ingest.example.com \
+  --set auth.local.adminEmail=you@example.com
+```
+
+On a single EC2 instance with k3s, Traefik and Let's Encrypt: [`deployments/ec2`](../../ec2/README.md).
 
 ## Uninstall
 
 ```bash
 helm uninstall kockpit -n kockpit
 kubectl -n kockpit delete pvc kockpit-data   # optional: also delete the stored manifests and payloads
+# shared instance: the accounts database and its password are kept too
+kubectl -n kockpit delete pvc data-kockpit-postgres-0 && kubectl -n kockpit delete secret kockpit-secrets
 kind delete cluster --name kockpit            # if you created a kind cluster for it
 ```

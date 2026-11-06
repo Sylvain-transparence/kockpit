@@ -1,0 +1,64 @@
+# Shared Kockpit instance on the internet (e.g. one EC2 instance with k3s, see deployments/ec2/README.md):
+# testers sign up on the console, create their tenant and API keys, and their applications send audits to the
+# ingestion gateway. Only the console (with /api) and the gateway's /ingest are exposed, over HTTPS.
+#
+#   helm upgrade --install kockpit deployments/kubernetes/kockpit -n kockpit --create-namespace \
+#     -f deployments/kubernetes/kockpit/values-public.yaml \
+#     --set ingress.host=console.example.com --set ingress.gatewayHost=ingest.example.com \
+#     --set auth.local.adminEmail=you@example.com
+
+ingress:
+  enabled: true
+  className: traefik            # k3s' ingress controller
+  host: ""                      # required: console host, e.g. console.example.com
+  gatewayHost: ""               # required: gateway host, e.g. ingest.example.com
+  certManagerClusterIssuer: letsencrypt
+
+auth:
+  local:
+    enabled: true
+    signupEnabled: true
+    adminEmail: ""              # required: the administrator's email; password in the kockpit-secrets secret
+  tenants:
+    perUser: 1
+    keysPerTenant: 3
+    dailyQuota: 10000
+    maxEnvs: 3
+    defaultEnvs: dev
+
+postgres:
+  enabled: true
+
+gateway:
+  enabled: true
+  auditTtlDays: 7
+
+# no sample application and no unrestricted demo manifest on a shared instance
+sampleApp:
+  enabled: false
+manifests:
+  fromFiles: false
+
+# keep audits, Kafka offsets and accounts across pod restarts
+kafka:
+  persistence:
+    enabled: true
+    size: 5Gi
+opensearch:
+  javaOpts: "-Xms1g -Xmx1g"
+  persistence:
+    enabled: true
+    size: 20Gi
+  resources:
+    requests: { cpu: 200m, memory: 1536Mi }
+    limits: { memory: 2Gi }
+data:
+  persistence:
+    enabled: true
+    size: 2Gi
+
+backend:
+  # less frequent polling of the shared storage than the quick start
+  pollInterval: PT15S
+console:
+  flagsRefreshMs: 15000

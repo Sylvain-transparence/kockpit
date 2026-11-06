@@ -2,9 +2,10 @@ apiVersion: v2
 name: kockpit
 description: >-
   Kockpit quick start: Kafka, OpenSearch, the audit stream, the backend (filesystem storage), the web console
-  and a sample application, on a single-node cluster (kind, minikube, Docker Desktop).
+  and a sample application, on a single-node cluster (kind, minikube, Docker Desktop). With values-public.yaml,
+  a shared instance: local accounts, tenants, API keys and the HTTP ingestion gateway, behind TLS.
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "latest"
 home: https://github.com/mahieddine-ichir/kockpit
 sources:

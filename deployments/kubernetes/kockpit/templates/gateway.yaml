@@ -1,0 +1,83 @@
+{{- if .Values.gateway.enabled }}
+{{- if not .Values.postgres.enabled }}
+{{- fail "gateway.enabled needs postgres.enabled (API keys and usage)" }}
+{{- end }}
+{{- $c := dict "root" . "name" "gateway" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  selector:
+    {{- include "kockpit.selectorLabels" $c | nindent 4 }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kockpit.component" $c }}
+  labels:
+    {{- include "kockpit.labels" $c | nindent 4 }}
+spec:
+  # in-memory rate limits (unknown keys per IP, messages per key) are per replica
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kockpit.selectorLabels" $c | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kockpit.selectorLabels" $c | nindent 8 }}
+    spec:
+      {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
+      initContainers:
+        # the backend owns the schema (Flyway): wait until it has created the API keys table
+        - name: wait-for-schema
+          image: {{ .Values.postgres.image }}
+          command: ["sh", "-c", "until psql -h {{ include "kockpit.component" (dict "root" . "name" "postgres") }} -U \"$PGUSER\" -d {{ .Values.postgres.database }} -tAc 'select 1 from api_keys limit 1' >/dev/null 2>&1; do echo 'waiting for the backend to migrate the database'; sleep 5; done"]
+          env:
+            - { name: PGUSER, value: {{ .Values.postgres.username | quote }} }
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: { name: {{ include "kockpit.secretName" . }}, key: db-password }
+      containers:
+        - name: gateway
+          image: {{ include "kockpit.image" (dict "root" . "image" .Values.gateway.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 8091
+          env:
+            {{- include "kockpit.dbEnv" . | nindent 12 }}
+            - { name: BOOTSTRAP_SERVERS, value: {{ include "kockpit.kafkaBootstrap" . | quote }} }
+            - { name: NOTIFICATION_TOPIC, value: {{ .Values.auditTopic | quote }} }
+            # messages for the backend: the same storage it polls
+            - { name: FS_STORAGE_PATH, value: /data }
+            - { name: KOCKPIT_GATEWAY_AUDIT_TTL_DAYS, value: {{ .Values.gateway.auditTtlDays | quote }} }
+            {{- with .Values.gateway.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            httpGet: { path: /actuator/health, port: management }
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: management }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: management }
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        {{- include "kockpit.dataVolume" . | nindent 8 }}
+{{- end }}

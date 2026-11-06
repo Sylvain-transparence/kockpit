@@ -38,6 +38,12 @@ spec:
     spec:
       {{- include "kockpit.imagePullSecrets" . | nindent 6 }}
       initContainers:
+        {{- if .Values.auth.local.enabled }}
+        # the backend migrates the accounts database at startup
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image }}
+          command: ["sh", "-c", "until pg_isready -h {{ include "kockpit.component" (dict "root" . "name" "postgres") }} -U {{ .Values.postgres.username }}; do sleep 3; done"]
+        {{- end }}
         # the manifests ConfigMap is the source of truth: copied over the stored ones on every start
         - name: copy-manifests
           image: busybox:1.37
@@ -64,6 +70,39 @@ spec:
             - { name: FS_STORAGE_PATH, value: /data }
             # drives all the backend's polling (heartbeats, acknowledgements, values), despite its name
             - { name: KOCKPIT_BACKEND_HEARTBEAT_POLLER_SCHEDULING, value: {{ .Values.backend.pollInterval | quote }} }
+            {{- if .Values.auth.local.enabled }}
+            {{- if not .Values.postgres.enabled }}
+            {{- fail "auth.local.enabled needs postgres.enabled" }}
+            {{- end }}
+            # local accounts: sign-up/sign-in, the id_token cookie, tenants and API keys
+            - { name: KOCKPIT_LOCAL_AUTH_ENABLED, value: "true" }
+            {{- include "kockpit.dbEnv" . | nindent 12 }}
+            - name: KOCKPIT_JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: {{ include "kockpit.secretName" . }}, key: jwt-secret }
+            - { name: KOCKPIT_COOKIE_SECURE, value: {{ eq (include "kockpit.scheme" .) "https" | quote }} }
+            - { name: KOCKPIT_SIGNUP_ENABLED, value: {{ .Values.auth.local.signupEnabled | quote }} }
+            {{- with .Values.auth.local.adminEmail }}
+            - { name: KOCKPIT_ADMIN_EMAIL, value: {{ . | quote }} }
+            - name: KOCKPIT_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: {{ include "kockpit.secretName" $ }}, key: admin-password }
+            {{- end }}
+            # the administrator's group; every user sees only their tenants' manifests
+            - { name: KOCKPIT_ADMIN_GROUPS, value: kockpit-admins }
+            - { name: KOCKPIT_HIDE_UNRESTRICTED_MANIFESTS, value: "true" }
+            - { name: KOCKPIT_TENANTS_PER_USER, value: {{ .Values.auth.tenants.perUser | quote }} }
+            - { name: KOCKPIT_KEYS_PER_TENANT, value: {{ .Values.auth.tenants.keysPerTenant | quote }} }
+            - { name: KOCKPIT_DEFAULT_DAILY_QUOTA, value: {{ .Values.auth.tenants.dailyQuota | quote }} }
+            - { name: KOCKPIT_TENANT_MAX_ENVS, value: {{ .Values.auth.tenants.maxEnvs | quote }} }
+            - { name: KOCKPIT_TENANT_DEFAULT_ENVS, value: {{ .Values.auth.tenants.defaultEnvs | quote }} }
+            {{- end }}
+            {{- if .Values.ingress.enabled }}
+            # browsers may call the API (with the cookie) from the console only
+            - { name: KOCKPIT_CORS_ALLOWED_ORIGINS, value: {{ include "kockpit.consoleOrigin" . | quote }} }
+            # client IP (sign-up and login limits) and scheme from the ingress' X-Forwarded-* headers
+            - { name: SERVER_FORWARD_HEADERS_STRATEGY, value: native }
+            {{- end }}
             {{- with .Values.backend.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

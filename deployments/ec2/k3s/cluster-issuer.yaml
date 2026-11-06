@@ -1,0 +1,17 @@
+# Let's Encrypt certificates for the console and gateway hosts (ingress.certManagerClusterIssuer: letsencrypt).
+# bootstrap.sh replaces ACME_EMAIL. While testing, point server at the staging endpoint
+# (https://acme-staging-v02.api.letsencrypt.org/directory) to stay clear of the production rate limits.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: ACME_EMAIL
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik

@@ -114,9 +114,65 @@ manifests:
   # extra manifests, file name -> JSON content
   extra: {}
 
+# Console (and /api to the backend) on ingress.host; the ingestion gateway's /ingest on ingress.gatewayHost.
 ingress:
   enabled: false
   className: ""
   annotations: {}
   host: kockpit.localhost
+  # host of the ingestion gateway (gateway.enabled); no gateway ingress when empty
+  gatewayHost: ""
+  # TLS certificates from cert-manager: name of a ClusterIssuer (e.g. letsencrypt), one certificate per host
+  certManagerClusterIssuer: ""
+  # or your own TLS entries (ignored with certManagerClusterIssuer)
   tls: []
+
+# ---------------------------------------------------------------------------------------------------------------
+# Shared instance: local accounts, tenants and API keys (see values-public.yaml and deployments/ec2)
+# ---------------------------------------------------------------------------------------------------------------
+
+# Local accounts in PostgreSQL: sign up / sign in on the console, self-service tenants and API keys.
+# Without it the API is open (quick start) - never expose it like that.
+auth:
+  local:
+    enabled: false
+    # accounts may be created from the console's sign-in page
+    signupEnabled: true
+    # administrator created at startup (sees every tenant, changes quotas); its password is in the secret
+    adminEmail: ""
+  # Values of the generated secret <fullname>-secrets (db-password, jwt-secret, admin-password).
+  # Empty = random at install, then kept across upgrades. Or name your own secret holding those keys.
+  existingSecret: ""
+  dbPassword: ""
+  jwtSecret: ""
+  adminPassword: ""
+  tenants:
+    perUser: 1
+    keysPerTenant: 3
+    dailyQuota: 10000
+    maxEnvs: 3
+    defaultEnvs: dev
+
+postgres:
+  # accounts, tenants, API keys and usage; required by auth.local and the gateway
+  enabled: false
+  image: postgres:17-alpine
+  database: kockpit
+  username: kockpit
+  persistence:
+    size: 2Gi
+    storageClass: ""
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 384Mi }
+
+# HTTP ingestion gateway: applications outside the cluster send audits and messages with an API key
+gateway:
+  enabled: false
+  image: kockpit-gateway-application
+  # audit retention forced on every audit (days), i.e. the OpenSearch retention policy
+  auditTtlDays: 7
+  env: []
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
