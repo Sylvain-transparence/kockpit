@@ -11,9 +11,15 @@ spring:
       bootstrap-servers: ${BOOTSTRAP_SERVERS:localhost:9092}
 
 kockpit:
+  # with the http profile: domain = the tenant, env = one of its envs (KOCKPIT_DOMAIN, KOCKPIT_ENV)
   domain: kockpit
   env: local
   app-id: ${spring.application.name}
+
+  # http profile only: the ingestion gateway and the tenant's API key, from the console's "Tenant & API keys" page
+  gateway:
+    url: ${KOCKPIT_GATEWAY_URL:}
+    api-key: ${KOCKPIT_API_KEY:}
 
   # the sample shows every feature in the console: messages go through the storage of the image's profile
   # (filesystem, Azure Storage or S3), and are polled back for feature flags and dynamic configuration
@@ -45,6 +51,8 @@ kockpit:
         stream_name: auditstream
 
   feature-flipping:
+    # the flags' service definition, without which the poller never asks for them
+    enabled: true
     client:
       scheduling: PT10S
     polling:

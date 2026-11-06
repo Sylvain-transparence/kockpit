@@ -153,6 +153,16 @@ class GatewayIntegrationTest {
     }
 
     @Test
+    void numbers_are_forwarded_exactly() throws Exception {
+        Key key = key("num" + suffix(), List.of("dev"), 100);
+        String numbers = "\"start\":1793974376.931907000,\"end\":1793974377.000000000,\"status\":200,\"big\":12345678901234567890123";
+
+        assertThat(postAudits(key.secret(), "{\"env\":\"dev\",\"appId\":\"shop\"," + numbers + "}").statusCode()).isEqualTo(202);
+
+        assertThat(new String(sink.records.getLast().value(), StandardCharsets.UTF_8)).contains(numbers);
+    }
+
+    @Test
     void a_single_audit_and_gzip_are_accepted() throws Exception {
         Key key = key("gz" + suffix(), List.of("dev"), 100);
         assertThat(postAudits(key.secret(), "{\"env\":\"dev\",\"appId\":\"shop\"}").statusCode()).isEqualTo(202);
@@ -274,6 +284,16 @@ class GatewayIntegrationTest {
         assertThat(json(send("GET", "/ingest/v1/messages?env=dev&type=feature-flipping", key.secret(), null))).isEmpty();
         assertThat(json(send("GET", "/ingest/v1/messages?env=dev", other.secret(), null))).isEmpty();
         assertThat(send("GET", "/ingest/v1/messages?env=prod", key.secret(), null).statusCode()).isEqualTo(400);
+        assertThat(send("GET", "/ingest/v1/messages?env=dev&appId=../x", key.secret(), null).statusCode()).isEqualTo(400);
+
+        // the SDK's pollers filter by app and service: the backend's flags carry no type
+        send("POST", "/ingest/v1/messages", key.secret(),
+                "{\"env\":\"dev\",\"appId\":\"shop\",\"service\":\"featureflipping\",\"type\":\"ack\",\"id\":\"f1\"}");
+        send("POST", "/ingest/v1/messages", key.secret(),
+                "{\"env\":\"dev\",\"appId\":\"cart\",\"service\":\"featureflipping\",\"type\":\"ack\",\"id\":\"f2\"}");
+        JsonNode flags = json(send("GET", "/ingest/v1/messages?env=dev&appId=shop&service=featureflipping", key.secret(), null));
+        assertThat(flags).hasSize(1);
+        assertThat(flags.get(0).get("id").asString()).isEqualTo("f1");
 
         for (String bad : List.of(
                 "{\"env\":\"dev\",\"appId\":\"../../x\",\"type\":\"heartbeat\"}",

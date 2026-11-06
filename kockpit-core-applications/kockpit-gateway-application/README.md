@@ -8,7 +8,7 @@ The key decides the domain (its tenant) and the allowed envs, whatever the paylo
 |---|---|---|
 | `POST /ingest/v1/audits` | an audit or an array of audits (SDK `AuditReport` JSON), optionally `Content-Encoding: gzip` | `202 {accepted, remaining, quota}` |
 | `POST /ingest/v1/messages` | one message (heartbeat, feature-flipping / dyna-config acknowledgement...) | `202 {id}` |
-| `GET /ingest/v1/messages?env=&type=` | | the env's messages, newest first |
+| `GET /ingest/v1/messages?env=&appId=&service=&type=` | | the env's messages, newest first; `appId`, `service` and `type` filter when given |
 
 Audits:
 - `domain` is replaced by the key's tenant, `ttl` by `KOCKPIT_GATEWAY_AUDIT_TTL_DAYS` (default 7);

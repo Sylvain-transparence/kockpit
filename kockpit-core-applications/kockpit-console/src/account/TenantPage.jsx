@@ -285,7 +285,52 @@ const TenantCard = ({tenant, limits, admin, onChanged}) => {
                 <p className="text-xs text-slate-600 mt-1">Key limit reached: revoke a key to create another one.</p>
             )}
             <ErrorBox message={error}/>
+            <UsageSnippet tenant={tenant} ingestUrl={ingestUrl}/>
         </Card>
+    );
+};
+
+const Snippet = ({title, code}) => (
+    <div className="mt-3">
+        <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700">{title}</span>
+            <CopyButton value={code} label={`Copy: ${title}`}/>
+        </div>
+        <pre className="mt-1 bg-slate-900 text-slate-100 text-xs rounded-lg p-3 overflow-x-auto"><code>{code}</code></pre>
+    </div>
+);
+
+// What a tester pastes into a Spring Boot application: the starters and the gateway settings.
+const UsageSnippet = ({tenant, ingestUrl}) => {
+    const maven = `<!-- audits of the HTTP calls, sent to the gateway -->
+<dependency>
+    <groupId>org.kockpit</groupId>
+    <artifactId>kockpit-features-audit-starters-http</artifactId>
+    <version>1.2.0-SNAPSHOT</version>
+</dependency>
+<!-- optional: heartbeats, feature flags and dynamic configuration through the gateway -->
+<dependency>
+    <groupId>org.kockpit</groupId>
+    <artifactId>kockpit-core-communication-http</artifactId>
+    <version>1.2.0-SNAPSHOT</version>
+</dependency>`;
+    const yaml = `kockpit:
+  domain: ${tenant.domain}
+  env: ${tenant.envs[0] ?? 'dev'}          # one of: ${tenant.envs.join(', ')}
+  app-id: \${spring.application.name}
+  gateway:
+    url: ${ingestUrl || 'https://ingest.example.com'}
+    api-key: \${KOCKPIT_API_KEY}   # from the environment, never in source control`;
+    return (
+        <details className="mt-6 border-t border-slate-200 pt-4">
+            <summary className="cursor-pointer text-base font-semibold text-slate-800">Use it in a Spring Boot application</summary>
+            <Snippet title="pom.xml" code={maven}/>
+            <Snippet title="application.yml" code={yaml}/>
+            <p className="text-sm text-slate-600 mt-3">
+                Audits are buffered and sent in batches. Over the daily quota they are dropped until midnight UTC and the application
+                logs it once; with a revoked key, once every five minutes.
+            </p>
+        </details>
     );
 };
 

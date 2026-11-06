@@ -24,7 +24,8 @@ import java.util.Map;
  *       {@code Content-Encoding: gzip}) - 202 {@code {accepted, remaining, quota}}; 429 past the
  *       daily quota, with {@code Retry-After} (seconds to midnight UTC);</li>
  *   <li>{@code POST /ingest/v1/messages}: one message - 202;</li>
- *   <li>{@code GET /ingest/v1/messages?env=&type=}: the env's messages, newest first.</li>
+ *   <li>{@code GET /ingest/v1/messages?env=&appId=&service=&type=}: the env's messages, newest
+ *       first, filtered by the optional appId, service and type.</li>
  * </ul>
  * Audit responses carry {@code X-Quota-Limit} and {@code X-Quota-Remaining}.
  */
@@ -62,8 +63,11 @@ public class IngestApi {
 
     @GetMapping("/messages")
     List<Message> poll(@RequestAttribute(ApiKeyFilter.ATTRIBUTE) ApiKey key,
-                       @RequestParam String env, @RequestParam(required = false) String type) {
-        return messaging.poll(key, env, type);
+                       @RequestParam String env,
+                       @RequestParam(required = false) String appId,
+                       @RequestParam(required = false) String service,
+                       @RequestParam(required = false) String type) {
+        return messaging.poll(key, env, appId, service, type);
     }
 
     @ExceptionHandler(GatewayException.class)

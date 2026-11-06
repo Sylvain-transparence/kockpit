@@ -15,6 +15,7 @@
         <module>kockpit-audit-notification-kafka</module>
         <module>kockpit-audit-notification-kinesis</module>
         <module>kockpit-audit-notification-eventhub</module>
+        <module>kockpit-audit-notification-http</module>
     </modules>
 
 

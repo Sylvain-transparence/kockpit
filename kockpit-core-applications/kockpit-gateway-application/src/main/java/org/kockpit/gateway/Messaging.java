@@ -94,15 +94,23 @@ public class Messaging {
         return message;
     }
 
-    /** The domain/env's messages (of {@code type} when given), newest first, at most max-poll. */
-    public List<Message> poll(ApiKey key, String env, String type) {
+    /**
+     * The domain/env's messages, newest first, at most max-poll; filtered by appId, service and
+     * type when given. The SDK's pollers ask for their app and service (feature-flipping,
+     * dyna-config): the backend's messages of those services carry no type.
+     */
+    public List<Message> poll(ApiKey key, String env, String appId, String service, String type) {
         checkEnv(key, env);
-        if (type != null && !Names.isValid(type)) {
-            throw GatewayException.badRequest("Invalid type");
+        for (var filter : List.of(new String[]{"appId", appId}, new String[]{"service", service}, new String[]{"type", type})) {
+            if (filter[1] != null && !Names.isValid(filter[1])) {
+                throw GatewayException.badRequest("Invalid " + filter[0]);
+            }
         }
         return consumers.stream()
-                .flatMap(consumer -> consumer.poll(key.domain(), env, null, type).stream())
+                .flatMap(consumer -> consumer.poll(key.domain(), env, null, service).stream())
                 .filter(Objects::nonNull)
+                .filter(message -> appId == null || appId.equals(message.getAppId()))
+                .filter(message -> service == null || service.equals(message.getService()))
                 .filter(message -> type == null || type.equals(message.getType()))
                 .sorted(Message.BY_CREATION_DATE.reversed())
                 .limit(properties.getMaxPoll())

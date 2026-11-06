@@ -14,7 +14,10 @@ import org.springframework.boot.test.context.SpringBootTest;
         "kockpit.aws.s3.bucket=smoke-test",
         // profil azure-eventhub : le client Event Hubs ne se connecte qu'au premier envoi
         "kockpit.audit.notification.eventhub.event_hub_name=smoke-test",
-        "kockpit.audit.notification.eventhub.connection_string=Endpoint=sb://smoke-test.servicebus.windows.net/;SharedAccessKeyName=smoke;SharedAccessKey=c21va2U="
+        "kockpit.audit.notification.eventhub.connection_string=Endpoint=sb://smoke-test.servicebus.windows.net/;SharedAccessKeyName=smoke;SharedAccessKey=c21va2U=",
+        // profil http : le client de la gateway ne se connecte qu'au premier envoi
+        "kockpit.gateway.url=http://localhost:1",
+        "kockpit.gateway.api-key=kpk_smoke"
 })
 class ApplicationSmokeTest {
 
