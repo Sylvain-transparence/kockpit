@@ -2,9 +2,13 @@
 # Read-only health check of the ISM (Index State Management) lifecycle of the audit indices.
 # Run it from a workstation with the cluster reachable (tunnel). It never writes to the cluster.
 #
-#   ism-check.sh [--url http://localhost:9200] [--pattern 'rcu-audit-data-pro-*'] [--list]
+#   ism-check.sh [--url http://localhost:9200] [--prefix rcu-audit-data] [--env pro] [--list]
+#   ism-check.sh [--url ...] --pattern '<index pattern>' [--list]
 #
-# Reports, for the indices matching --pattern:
+# The indices checked are <prefix>-<env>-* (default rcu-audit-data-pro-*). --prefix and --env also
+# read the ISM_CHECK_PREFIX / ISM_CHECK_ENV environment variables; --pattern overrides both.
+#
+# Reports, for the indices matching the pattern:
 #   1. number of indices per family (name without the -YYYY.MM.DD-NNNNN suffix)
 #   2. indices past their retention (the ttlNd in the name, age from creation date) still present
 #   3. failed ISM actions (e.g. rollover "Missing alias or not the write index")
@@ -17,23 +21,30 @@
 #
 # Generic OpenSearch (REST + ISM plugin only, curl and python3), not tied to Azure.
 #
-# Examples: prod  ism-check.sh --pattern 'rcu-audit-data-pro-*'
-#           dev   ism-check.sh --pattern 'rcu-audit-data-oat-*'   (dev cluster tunnel)
-#                 ism-check.sh --pattern '*-ttl*'                 (everything with a TTL)
+# Examples: prod  ism-check.sh                                       (rcu-audit-data-pro-*)
+#           dev   ism-check.sh --env oat                             (dev cluster tunnel)
+#                 ism-check.sh --prefix kockpit-audit-data --env dev
+#                 ism-check.sh --pattern '*-ttl*'                    (everything with a TTL)
 set -euo pipefail
 
 URL=http://localhost:9200
-PATTERN='rcu-audit-data-pro-*'
+PREFIX=${ISM_CHECK_PREFIX:-rcu-audit-data}
+ENV=${ISM_CHECK_ENV:-pro}
+PATTERN=""
 LIST=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --url) URL=$2; shift 2 ;;
+    --prefix) PREFIX=$2; shift 2 ;;
+    --env) ENV=$2; shift 2 ;;
     --pattern) PATTERN=$2; shift 2 ;;
     --list) LIST=1; shift ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,27p' "$0"; exit 0 ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
 done
+
+PATTERN=${PATTERN:-$PREFIX-$ENV-*}
 
 curl -sf "$URL" >/dev/null || { echo "cluster not reachable at $URL (tunnel open?)" >&2; exit 2; }
 
@@ -48,6 +59,9 @@ get = lambda p: json.load(urllib.request.urlopen(U + p, timeout=120))
 q = urllib.parse.quote(PAT, safe="*,")
 
 indices = get(f"/_cat/indices/{q}?format=json&h=index,creation.date,docs.count,store.size&bytes=b&expand_wildcards=open")
+if not indices:
+    print(f"\nno index matches {PAT}")
+    sys.exit(0)
 explain = get(f"/_plugins/_ism/explain/{q}?size=5000")
 policies = {p["_id"]: p["_seq_no"] for p in get("/_plugins/_ism/policies?size=1000")["policies"]}
 now = time.time() * 1000
