@@ -217,7 +217,9 @@ const UploadZone = ({ onUploadSuccess }) => {
             }
         } catch (err) {
             console.error('Upload error:', err);
-            setUploadMessage({ type: 'error', text: `Failed to upload manifest: ${err.message}` });
+            // the backend explains a 400 (invalid name/domain/env) or 403 (not your manifest/domain)
+            const reason = err.response?.data?.message || err.message;
+            setUploadMessage({ type: 'error', text: `Failed to upload manifest: ${reason}` });
             setTimeout(() => setUploadMessage(null), 5000);
         } finally {
             setUploading(false);

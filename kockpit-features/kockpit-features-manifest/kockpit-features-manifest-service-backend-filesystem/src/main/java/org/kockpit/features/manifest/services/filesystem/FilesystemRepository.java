@@ -48,8 +48,8 @@ public class FilesystemRepository implements ManifestBackendRepository {
     @Override
     public Optional<ManifestDto> findByName(String name) {
         try {
-            Path filePath = Path.of(localFilePath, name);
-            if (!Files.exists(filePath)) {
+            Path filePath = inDirectory(name);
+            if (filePath == null || !Files.exists(filePath)) {
                 return Optional.empty();
             }
 
@@ -78,11 +78,26 @@ public class FilesystemRepository implements ManifestBackendRepository {
             Files.createDirectories(dirPath);
         }
 
-        File file = new File(localFilePath, fileName);
+        Path filePath = inDirectory(fileName);
+        if (filePath == null) {
+            throw new IllegalArgumentException("Manifest name outside the manifests directory: " + fileName);
+        }
+        File file = filePath.toFile();
         objectMapper.writeValue(file, manifestDto);
 
         manifestDto.setName(fileName);
         return manifestDto;
+    }
+
+    // The file for this name, or null when the name isn't a plain file name of the directory
+    // ("../x.json", "sub/x.json", an absolute path...).
+    Path inDirectory(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        Path dir = Path.of(localFilePath).toAbsolutePath().normalize();
+        Path file = dir.resolve(name).normalize();
+        return dir.equals(file.getParent()) ? file : null;
     }
 
     private ManifestDto read(Path path) {

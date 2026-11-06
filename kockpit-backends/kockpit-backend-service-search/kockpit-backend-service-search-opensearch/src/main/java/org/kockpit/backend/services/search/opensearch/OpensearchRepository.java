@@ -84,9 +84,11 @@ public class OpensearchRepository implements SearchService {
     @SneakyThrows
     @Override
     public Page listAudits(String domain, String env, List<String> appIds, Integer start, Integer size) {
+        // exact, as in byId(): a plain match on a text-mapped field would OR the tokens, so
+        // domain "acme" would also match "acme-test" documents
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        boolQueryBuilder.must(matchQuery("env", env));
-        boolQueryBuilder.must(matchQuery("domain", domain));
+        boolQueryBuilder.must(matchPhraseQuery("env", env));
+        boolQueryBuilder.must(matchPhraseQuery("domain", domain));
 
         return runQuery(restrictToAppIds(boolQueryBuilder, appIds), domain, env, start, size);
     }

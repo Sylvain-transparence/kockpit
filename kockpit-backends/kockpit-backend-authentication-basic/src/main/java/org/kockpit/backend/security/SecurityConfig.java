@@ -144,16 +144,39 @@ public class SecurityConfig {
         };
     }
 
+    // Origins (patterns) allowed to call the API from a browser with credentials, comma-separated.
+    // "*" (the default) lets any site send the user's cookie along: set the console's origin(s)
+    // (e.g. https://console.example.com) on any instance reachable from the internet.
+    @Value("${kockpit.security.cors.allowed-origins:*}")
+    private String corsAllowedOrigins;
+
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        List<String> origins = parseOrigins(corsAllowedOrigins);
+        if (origins.contains("*")) {
+            log.warn("⚠️ CORS allows every origin with credentials (kockpit.security.cors.allowed-origins=*)");
+        } else {
+            log.info("✅ CORS allowed origins: {}", origins);
+        }
+        configuration.setAllowedOriginPatterns(origins);
         configuration.addAllowedHeader("*");
         configuration.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    static List<String> parseOrigins(String configured) {
+        if (!StringUtils.hasText(configured)) {
+            return List.of("*");
+        }
+        List<String> origins = Arrays.stream(configured.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
+        return origins.isEmpty() ? List.of("*") : origins;
     }
 
     @Bean

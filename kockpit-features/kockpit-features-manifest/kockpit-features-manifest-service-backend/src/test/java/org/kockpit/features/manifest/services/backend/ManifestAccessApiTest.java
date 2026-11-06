@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.kockpit.features.manifest.services.ManifestBackendRepository;
 import org.kockpit.features.manifest.services.ManifestReader;
 import org.kockpit.features.manifest.services.dto.ManifestDto;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -130,10 +132,151 @@ class ManifestAccessApiTest {
         mvc.perform(get("/insurance/dev/audits/_search")).andExpect(status().isOk());
     }
 
+    @Test
+    void access_control_switch_overrides_the_cognito_default() throws Exception {
+        // on without Cognito (local users): an anonymous caller only sees unrestricted manifests
+        MockMvc on = mvc("", "true", "", false);
+        on.perform(get("/manifests")).andExpect(jsonPath("$.length()").value(1));
+        on.perform(get("/insurance/dev/audits/_search")).andExpect(status().isForbidden());
+
+        // explicitly off with Cognito configured
+        MockMvc off = mvc("https://cognito-idp.eu-west-1.amazonaws.com/pool", "false", "", false);
+        off.perform(get("/manifests")).andExpect(jsonPath("$.length()").value(4));
+    }
+
+    @Test
+    void invalid_domain_or_env_is_rejected_even_without_access_control() throws Exception {
+        for (MockMvc mvc : List.of(mvc(false), mvc(true))) {
+            loginWith("KOCKPIT-Console-InsuranceTeam");
+            mvc.perform(get("/*/dev/audits/_search")).andExpect(status().isBadRequest());
+            mvc.perform(get("/insurance,offers/dev/audits/_search")).andExpect(status().isBadRequest());
+            mvc.perform(get("/insurance/de*v/heartbeat")).andExpect(status().isBadRequest());
+            mvc.perform(get("/-insurance/dev/heartbeat")).andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
+    void admins_see_and_use_everything() throws Exception {
+        MockMvc mvc = mvc("https://cognito-idp.eu-west-1.amazonaws.com/pool", "", "kockpit-admins", true);
+
+        loginWith("KOCKPIT-Admins");
+        mvc.perform(asUser(get("/manifests"))).andExpect(jsonPath("$.length()").value(4));
+        mvc.perform(get("/insurance/dev/cache/anything")).andExpect(status().isOk());
+    }
+
+    @Test
+    void hide_unrestricted_keeps_manifests_without_groups_from_everyone_but_admins() throws Exception {
+        MockMvc mvc = mvc("https://cognito-idp.eu-west-1.amazonaws.com/pool", "", "kockpit-admins", true);
+
+        loginWith("KOCKPIT-Console-ReadOnly");
+        mvc.perform(asUser(get("/manifests"))).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(asUser(get("/manifests/messaging-dev"))).andExpect(status().isNotFound());
+        mvc.perform(get("/messaging/dev/audits/_search")).andExpect(status().isForbidden());
+
+        loginWith("KOCKPIT-Admins");
+        mvc.perform(get("/messaging/dev/audits/_search")).andExpect(status().isOk());
+    }
+
+    @Test
+    void owners_may_save_their_manifests_and_add_envs_to_their_domain() throws Exception {
+        MockMvc mvc = mvc(true);
+        loginWith("KOCKPIT-Console-InsuranceTeam");
+
+        mvc.perform(save("""
+                        { "domain": "insurance", "env": "dev", "name": "insurance-dev",
+                          "groups": ["KOCKPIT-Console-InsuranceTeam"], "services": [] }"""))
+                .andExpect(status().isOk());
+        mvc.perform(save("""
+                        { "domain": "insurance", "env": "prod", "name": "insurance-prod",
+                          "groups": ["KOCKPIT-Console-InsuranceTeam", "*"], "services": [] }"""))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void saving_is_denied_outside_what_the_user_owns() throws Exception {
+        MockMvc mvc = mvc(true);
+
+        // a policy grants the use of services, not the manifest: QaTeam can't rewrite offers-review
+        loginWith("KOCKPIT-Console-QaTeam");
+        mvc.perform(save("""
+                        { "domain": "offers", "env": "review-mr-1551", "name": "offers-review",
+                          "groups": ["KOCKPIT-Console-QaTeam"], "services": [] }"""))
+                .andExpect(status().isForbidden());
+
+        loginWith("KOCKPIT-Console-InsuranceTeam");
+        // another team's domain, under a new name
+        mvc.perform(save("""
+                        { "domain": "offers", "env": "squat", "name": "offers-squat",
+                          "groups": ["KOCKPIT-Console-InsuranceTeam"], "services": [] }"""))
+                .andExpect(status().isForbidden());
+        // an unrestricted manifest ("*" is not ownership)
+        mvc.perform(save("""
+                        { "domain": "insurance", "env": "dev", "name": "insurance-dev",
+                          "groups": ["*"], "services": [] }"""))
+                .andExpect(status().isForbidden());
+        mvc.perform(save("""
+                        { "domain": "insurance", "env": "dev", "name": "insurance-dev", "services": [] }"""))
+                .andExpect(status().isForbidden());
+        // a new domain
+        mvc.perform(save("""
+                        { "domain": "brand-new", "env": "dev", "name": "brand-new-dev",
+                          "groups": ["KOCKPIT-Console-InsuranceTeam"], "services": [] }"""))
+                .andExpect(status().isForbidden());
+        // unrestricted messaging: nobody owns it, so nobody but an admin may add to it
+        mvc.perform(save("""
+                        { "domain": "messaging", "env": "prod", "name": "messaging-prod",
+                          "groups": ["KOCKPIT-Console-InsuranceTeam"], "services": [] }"""))
+                .andExpect(status().isForbidden());
+
+        // anonymous
+        SecurityContextHolder.clearContext();
+        mvc.perform(post("/manifests").contentType(MediaType.APPLICATION_JSON).content("""
+                        { "domain": "insurance", "env": "dev", "name": "insurance-dev",
+                          "groups": ["KOCKPIT-Console-InsuranceTeam"] }"""))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void admins_may_create_domains() throws Exception {
+        MockMvc mvc = mvc("https://cognito-idp.eu-west-1.amazonaws.com/pool", "", "kockpit-admins", false);
+        loginWith("KOCKPIT-Admins");
+        mvc.perform(save("""
+                        { "domain": "brand-new", "env": "dev", "name": "brand-new-dev",
+                          "groups": ["KOCKPIT-Console-NewTeam"], "services": [] }"""))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void names_that_could_escape_the_storage_are_rejected_even_without_access_control() throws Exception {
+        MockMvc mvc = mvc(false);
+
+        mvc.perform(post("/manifests").contentType(MediaType.APPLICATION_JSON).content("""
+                        { "domain": "insurance", "env": "dev", "name": "../../etc/evil.json" }"""))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/manifests").contentType(MediaType.APPLICATION_JSON).content("""
+                        { "domain": "*", "env": "dev", "name": "x.json" }"""))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/manifests").contentType(MediaType.APPLICATION_JSON).content("""
+                        { "env": "dev", "name": "x.json" }"""))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/manifests/..")).andExpect(status().isNotFound());
+        mvc.perform(post("/manifests").contentType(MediaType.APPLICATION_JSON).content("""
+                        { "domain": "insurance", "env": "dev", "name": "insurance-dev.json" }"""))
+                .andExpect(status().isOk());
+    }
+
+    private static MockHttpServletRequestBuilder save(String json) {
+        return asUser(post("/manifests").contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
     private static MockMvc mvc(boolean cognitoConfigured) {
+        return mvc(cognitoConfigured ? "https://cognito-idp.eu-west-1.amazonaws.com/pool" : "", "", "", false);
+    }
+
+    private static MockMvc mvc(String cognitoIssuer, String accessControlEnabled, String adminGroups, boolean hideUnrestricted) {
         ManifestBackendService backend = new ManifestBackendService(new InMemoryRepository());
-        ManifestAccessService access = new ManifestAccessService(backend,
-                cognitoConfigured ? "https://cognito-idp.eu-west-1.amazonaws.com/pool" : "");
+        ManifestAccessService access = new ManifestAccessService(backend, cognitoIssuer, accessControlEnabled,
+                adminGroups, hideUnrestricted);
         return MockMvcBuilders.standaloneSetup(new ManifestApi(backend, access), new FeatureEndpoints())
                 .addMappedInterceptors(ManifestAccessWebConfig.pathPatterns(), new ManifestAccessInterceptor(access))
                 .build();

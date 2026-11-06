@@ -39,7 +39,7 @@ class ManifestAccessInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        if (!manifestAccessService.isEnabled() || HttpMethod.OPTIONS.matches(request.getMethod())) {
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
             return true;
         }
         @SuppressWarnings("unchecked")
@@ -50,6 +50,18 @@ class ManifestAccessInterceptor implements HandlerInterceptor {
         }
         String domain = vars.get("domain");
         String env = vars.get("env");
+        // Checked whether access control is on or not: domain/env build index names and storage
+        // paths downstream ("*" would search every domain's alias, ".." leave the storage dir).
+        if (!ManifestNames.isValidSegment(domain) || !ManifestNames.isValidSegment(env)) {
+            log.info("Invalid domain/env rejected: {} {}", request.getMethod(), request.getRequestURI());
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.getWriter().write("{\"error\":\"bad_request\",\"message\":\"Invalid domain or env\"}");
+            return false;
+        }
+        if (!manifestAccessService.isEnabled()) {
+            return true;
+        }
         String type = SERVICE_TYPE_BY_FEATURE.get(feature);
         String id = vars.get("id");
 
