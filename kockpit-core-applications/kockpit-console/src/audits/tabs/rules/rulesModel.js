@@ -8,7 +8,8 @@ export const VALID = 'VALID';
 export const AUTO_EXPAND_MAX_STEPS = 30;
 
 // Steps carry error=null when fine, rules/executions carry error="VALID"
-export const isError = (error) => error != null && error !== VALID;
+export const isWarning = (error) => error === 'WARNING';
+export const isError = (error) => error != null && error !== VALID && !isWarning(error);
 
 // "com.acme.HelloRule.HelloDefault" -> "HelloDefault"; plain names are kept as is
 export const shortName = (name) => {
@@ -27,6 +28,8 @@ export const withoutKey = (step) => {
 };
 
 export const ruleFailed = (rule) => isError(rule.error) || rule.steps.some(step => isError(step.error));
+
+export const ruleWarning = (rule) => isWarning(rule.error) || rule.steps.some(step => isWarning(step.error));
 
 export const parseExecutions = (request) => {
     const flows = request.audits?.find(a => a.type === "kengine.flows");

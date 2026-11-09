@@ -1,7 +1,7 @@
 import React from 'react';
-import { AlertCircle, CheckCircle, XCircle, Timer, Zap, HelpCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Timer, Zap, HelpCircle, TriangleAlert } from 'lucide-react';
 import CopyButton from "../../../components/CopyButton.jsx";
-import { VALID, isError } from './rulesModel.js';
+import { VALID, isError, isWarning } from './rulesModel.js';
 import { hatch } from './failedStyle.js';
 
 // Building blocks shared by the Rules tab views and its details panel
@@ -21,11 +21,14 @@ const getDurationColor = (duration) => {
 
 export const StatusBadge = ({ error, small }) => {
     const failed = isError(error);
+    const warning = isWarning(error);
+    const Icon = failed ? XCircle : warning ? TriangleAlert : CheckCircle;
     return (
         <span className={`inline-flex items-center rounded-full font-bold border ${small ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs border-2'} ${failed
             ? 'bg-red-100 text-red-800 border-red-300'
-            : 'bg-green-100 text-green-800 border-green-300'}`}>
-            {failed ? <XCircle className="w-3 h-3 mr-1" /> : <CheckCircle className="w-3 h-3 mr-1" />}
+            : warning ? 'bg-amber-100 text-amber-900 border-amber-300'
+                : 'bg-green-100 text-green-800 border-green-300'}`}>
+            <Icon className="w-3 h-3 mr-1" aria-hidden="true" />
             {error || VALID}
         </span>
     );

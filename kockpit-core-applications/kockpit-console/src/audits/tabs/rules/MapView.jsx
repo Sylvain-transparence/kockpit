@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, ChevronsDown, Workflow, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsDown, TriangleAlert, Workflow, X } from 'lucide-react';
 import { FailedIcon, StatusBadge, TimelineBar } from './RulesCommon.jsx';
 import { FAILED_BORDER, hatch } from './failedStyle.js';
 import RuleCard from './RuleCard.jsx';
-import { count, isError, ruleFailed, shortName, stepName } from './rulesModel.js';
+import { count, isError, isWarning, ruleFailed, ruleWarning, shortName, stepName } from './rulesModel.js';
 
 // Zoomed-out overview, to take in a large flow at a glance: one lane per execution, its rules
 // as tiles in execution order - wider and darker the longer they took; failed: red, dashed,
@@ -24,6 +24,9 @@ const HEAT = [
     'bg-sky-500 border-sky-600 text-white',
 ];
 const FAILED_TILE = `bg-red-100 ${FAILED_BORDER} text-red-950`;
+const WARNING_TILE = 'bg-amber-100 border-amber-400 text-amber-950';
+const displayStatus = (status, failed) => failed && !isError(status) ? 'ERROR' : status;
+const mapStatus = (rule) => ruleFailed(rule) ? 'failed' : ruleWarning(rule) ? 'WARNING' : null;
 
 const heatOf = (time, maxTime) => {
     if (!time || maxTime <= 0) return HEAT[0];
@@ -49,6 +52,7 @@ const FocusBar = ({ execution, rule, maxTime, onSelect }) => {
                     <span className="mx-1 text-slate-500">›</span>
                     <span className="font-semibold">{shortName(rule.name)}</span>
                     {ruleFailed(rule) && <span className="ml-1.5 font-semibold text-red-300">✕ failed</span>}
+                    {mapStatus(rule) === 'WARNING' && <span className="ml-1.5 font-semibold text-amber-300">WARNING</span>}
                 </span>
                 <span className="shrink-0 text-slate-400 tabular-nums">{index + 1} / {execution.rules.length}</span>
             </div>
@@ -63,11 +67,11 @@ const FocusBar = ({ execution, rule, maxTime, onSelect }) => {
                             key={r.key}
                             type="button"
                             onClick={() => onSelect(r.key)}
-                            title={`${r.name}${r.time != null ? ` · ${r.time} ms` : ''}${ruleFailed(r) ? ' · failed' : ''}`}
-                            aria-label={`${shortName(r.name)}${ruleFailed(r) ? ' (failed)' : ''}`}
+                            title={`${r.name}${r.time != null ? ` · ${r.time} ms` : ''}${mapStatus(r) ? ` · ${mapStatus(r)}` : ''}`}
+                            aria-label={`${shortName(r.name)}${mapStatus(r) ? ` (${mapStatus(r)})` : ''}`}
                             aria-current={r.key === rule.key ? 'true' : undefined}
                             style={{ flex: `${Math.max(r.time || 0, 1)} 1 0.25rem`, ...(ruleFailed(r) ? hatch(true) : {}) }}
-                            className={`min-w-[3px] rounded-[2px] focus:outline-none focus:ring-2 focus:ring-sky-300 ${ruleFailed(r) ? 'bg-red-600' : heatOf(r.time, maxTime)} ${r.key === rule.key
+                            className={`min-w-[3px] rounded-[2px] focus:outline-none focus:ring-2 focus:ring-sky-300 ${ruleFailed(r) ? 'bg-red-600' : ruleWarning(r) ? 'bg-amber-400' : heatOf(r.time, maxTime)} ${r.key === rule.key
                                 ? 'relative z-10 outline outline-2 outline-offset-1 outline-white'
                                 : 'opacity-80 hover:opacity-100'}`}
                         />
@@ -85,27 +89,31 @@ const FocusBar = ({ execution, rule, maxTime, onSelect }) => {
 const StepMark = ({ step, selected, onSelect }) => {
     const isPredicate = step.actionPredicate === 'PREDICATE';
     const failed = isError(step.error);
+    const warning = isWarning(step.error);
     const color = isPredicate ? 'bg-amber-300 border-amber-500' : 'bg-purple-300 border-purple-500';
     // a failed step is an X, whatever its kind: a shape, not just a color
     const shape = failed
         ? 'w-3 h-3 rounded-sm flex items-center justify-center bg-red-700 border-red-900 text-white'
-        : `w-2.5 h-2.5 ${isPredicate ? 'rotate-45 rounded-[1px]' : 'rounded-sm'} ${color}`;
+        : warning ? 'w-3 h-3 rounded-sm flex items-center justify-center bg-amber-100 border-amber-500 text-amber-950'
+            : `w-2.5 h-2.5 ${isPredicate ? 'rotate-45 rounded-[1px]' : 'rounded-sm'} ${color}`;
     return (
         <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onSelect(step.key); }}
-            title={`${stepName(step)}${step.time != null ? ` · ${step.time} ms` : ''}${failed ? ` · ${step.errorMessage || step.error}` : ''}`}
-            aria-label={shortName(stepName(step))}
+            title={`${stepName(step)}${step.time != null ? ` · ${step.time} ms` : ''}${failed ? ` · ${step.errorMessage || step.error}` : warning ? ' · WARNING' : ''}`}
+            aria-label={`${shortName(stepName(step))}${warning ? ' (WARNING)' : ''}`}
             aria-pressed={selected}
             className={`border focus:outline-none focus:ring-2 focus:ring-blue-500 ${shape} ${selected ? 'ring-2 ring-blue-600 ring-offset-1' : ''}`}
         >
             {failed && <X className="w-2.5 h-2.5" strokeWidth={4} />}
+            {warning && <TriangleAlert className="w-2.5 h-2.5" aria-hidden="true" />}
         </button>
     );
 };
 
 const RuleTile = ({ rule, maxTime, selected, onSelect }) => {
     const failed = ruleFailed(rule);
+    const warning = mapStatus(rule) === 'WARNING';
     const marks = rule.steps.slice(0, MAX_STEP_MARKS);
     const hidden = rule.steps.length - marks.length;
     const isSelected = selected === rule.key;
@@ -123,16 +131,17 @@ const RuleTile = ({ rule, maxTime, selected, onSelect }) => {
                 }
             }}
             aria-pressed={isSelected}
-            title={`${rule.name}${rule.time != null ? ` · ${rule.time} ms` : ''} · ${count(rule.steps.length, 'step')}${failed ? ' · failed' : ''}`}
+            title={`${rule.name}${rule.time != null ? ` · ${rule.time} ms` : ''} · ${count(rule.steps.length, 'step')}${mapStatus(rule) ? ` · ${mapStatus(rule)}` : ''}`}
             // longer rules get wider tiles: the grow factor is the duration, on top of a minimum width
             style={{ flex: `${Math.max(rule.time || 0, 1)} 1 9.5rem`, ...(failed ? hatch(false) : {}) }}
-            className={`min-w-0 max-w-full rounded-lg border-2 px-2.5 py-2 cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 ${failed ? FAILED_TILE : heatOf(rule.time, maxTime)} ${isSelected ? 'ring-2 ring-blue-600 ring-offset-2' : containsSelected ? 'ring-1 ring-blue-400 ring-offset-1' : ''}`}
+            className={`min-w-0 max-w-full rounded-lg border-2 px-2.5 py-2 cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 ${failed ? FAILED_TILE : warning ? WARNING_TILE : heatOf(rule.time, maxTime)} ${isSelected ? 'ring-2 ring-blue-600 ring-offset-2' : containsSelected ? 'ring-1 ring-blue-400 ring-offset-1' : ''}`}
         >
             <div className="flex items-baseline justify-between gap-2">
                 <span className="flex items-center gap-1 min-w-0">
                     {failed && <FailedIcon className="w-3.5 h-3.5" />}
                     <span className="text-xs font-semibold truncate">{shortName(rule.name)}</span>
                 </span>
+                {warning && <StatusBadge error="WARNING" small />}
                 <span className="shrink-0 text-[10px] font-semibold tabular-nums opacity-80">{rule.time != null ? `${rule.time} ms` : ''}</span>
             </div>
             {rule.steps.length > 0 && (
@@ -161,7 +170,7 @@ const Lane = ({ execution, showHeader, maxTime, timeWindow, selected, onSelect }
                     <Workflow className="w-4 h-4 shrink-0 text-sky-300" />
                     <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Flow</span>
                     <span className="text-sm font-semibold truncate">{execution.name || 'Unnamed execution'}</span>
-                    <StatusBadge error={execution.error} small />
+                    <StatusBadge error={displayStatus(execution.error, execution.rules.some(ruleFailed))} small />
                     <span className="text-xs text-slate-300 tabular-nums">
                         {count(execution.rules.length, 'rule')}{execution.time != null ? ` · ${execution.time} ms` : ''}
                     </span>
@@ -190,6 +199,9 @@ const Legend = ({ maxTime }) => (
         <span className="inline-flex items-center gap-1.5">
             <span className={`w-5 h-3.5 rounded-sm border-2 ${FAILED_TILE}`} style={hatch(false)} />
             <FailedIcon className="w-3.5 h-3.5" />failed
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-amber-900">
+            <TriangleAlert className="w-3.5 h-3.5" aria-hidden="true" />WARNING
         </span>
         <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rotate-45 rounded-[1px] border bg-amber-300 border-amber-500" />predicate</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm border bg-purple-300 border-purple-500" />action</span>
@@ -244,7 +256,8 @@ const MapView = ({ executions, timeWindow, nodes, selected, onSelect }) => {
                         <FocusBar execution={node.execution} rule={cardRule} maxTime={maxTime} onSelect={select} />
                         <RuleCard
                             rule={cardRule}
-                            tone={ruleFailed(cardRule) ? FAILED_TILE : heatOf(cardRule.time, maxTime)}
+                            status={displayStatus(cardRule.error, ruleFailed(cardRule))}
+                            tone={ruleFailed(cardRule) ? FAILED_TILE : ruleWarning(cardRule) ? WARNING_TILE : heatOf(cardRule.time, maxTime)}
                             timeWindow={timeWindow}
                             selected={selected}
                             onSelect={select}

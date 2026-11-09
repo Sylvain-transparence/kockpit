@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { GitBranch, HelpCircle, X, XCircle, Zap } from 'lucide-react';
 import { FailedIcon, StatusBadge } from './RulesCommon.jsx';
 import { FAILED_BORDER, hatch } from './failedStyle.js';
-import { count, isError, ruleFailed, shortName, stepName } from './rulesModel.js';
+import { count, isError, isWarning, ruleFailed, shortName, stepName } from './rulesModel.js';
 
 // One rule drawn out: its steps as a horizontal chain (predicate outcomes on the arrows), then a
 // waterfall placing each step within the rule's own time span - finer than the request-wide
@@ -73,6 +73,7 @@ const ChainNode = ({ step, index, selected, onSelect }) => {
             <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">#{index + 1} · {step.actionPredicate || 'ACTION'}</span>
             <span className="w-full text-xs font-semibold text-gray-900 truncate">{shortName(name)}</span>
             <span className="text-[11px] font-semibold text-gray-500 tabular-nums">{step.time != null ? `${step.time} ms` : ''}</span>
+            {isWarning(step.error) && <StatusBadge error={step.error} small />}
             {failed && (
                 <span className="w-full flex items-center justify-center gap-1 text-[11px] text-red-700 truncate">
                     <XCircle className="w-3 h-3 shrink-0" />
@@ -110,6 +111,7 @@ const WaterfallRow = ({ step, index, stepsWindow, selected, onSelect }) => {
                 <span className="shrink-0 text-gray-400 tabular-nums">#{index + 1}</span>
                 {failed && <FailedIcon className="w-3.5 h-3.5" />}
                 <span className="truncate" title={stepName(step)}>{shortName(stepName(step))}</span>
+                {isWarning(step.error) && <StatusBadge error={step.error} small />}
             </span>
             <span className="relative h-2.5 rounded-full bg-gray-100" title={offset != null ? `+${offset}ms → ${offset + (step.time || 0)}ms` : ''}>
                 {offset != null && (
@@ -140,7 +142,7 @@ const Waterfall = ({ rule, stepsWindow, selected, onSelect }) => (
     </div>
 );
 
-const RuleCard = ({ rule, tone, timeWindow, selected, onSelect, reveal, onClose }) => {
+const RuleCard = ({ rule, status = rule.error, tone, timeWindow, selected, onSelect, reveal, onClose }) => {
     const ref = useRef(null);
     const stepsWindow = useMemo(() => ruleWindow(rule), [rule]);
 
@@ -164,7 +166,7 @@ const RuleCard = ({ rule, tone, timeWindow, selected, onSelect, reveal, onClose 
                     {failed ? <FailedIcon /> : <GitBranch className="w-4 h-4 shrink-0 opacity-70" />}
                     <span className="text-sm font-semibold truncate">{shortName(rule.name)}</span>
                 </button>
-                <StatusBadge error={rule.error} small />
+                <StatusBadge error={status} small />
                 <span className="text-xs opacity-80 tabular-nums">
                     {count(rule.steps.length, 'step')}
                     {rule.time != null ? ` · ${rule.time} ms` : ''}
