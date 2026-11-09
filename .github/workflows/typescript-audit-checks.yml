@@ -1,10 +1,8 @@
 name: TypeScript audit SDK
 
 on:
-  pull_request:
-    paths:
-      - 'kockpit-libs/typescript/audit/**'
-      - '.github/workflows/typescript-audit-checks.yml'
+  push:
+    branches: [ci/verify-typescript-audit-pr-9]
 
 permissions:
   contents: read
