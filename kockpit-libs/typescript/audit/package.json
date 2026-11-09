@@ -1,0 +1,35 @@
+{
+  "name": "@kockpit/audit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Experimental Node.js audit SDK for the Kockpit audit stream",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/http.js",
+    "dist/http.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "4.1.12"
+  },
+  "packageManager": "pnpm@11.24.0"
+}
